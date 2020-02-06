@@ -14,7 +14,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, ToAdToken, ToStationToken};
+use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 
 /// Retrieve the metadata for the associated advertisement token (usually provided by one of the other methods responsible for retrieving the playlist).
 ///
@@ -26,9 +26,9 @@ use crate::json::{PandoraApiRequest, ToAdToken, ToStationToken};
 /// | includeBannerAd | boolean | bannerAdMap containing an HTML fragment that can be embedded in web pages is included in the results if set to ‘True’. (optional) |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
 #[serde(rename_all = "camelCase")]
-pub struct GetAdMetadata<A: ToAdToken + Clone> {
+pub struct GetAdMetadata {
     /// The ad token associated with the ad for which metadata is being requested.
-    pub ad_token: A,
+    pub ad_token: String,
     /// Whether to include ad tracking tokens in the response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_ad_tracking_tokens: Option<bool>,
@@ -38,6 +38,17 @@ pub struct GetAdMetadata<A: ToAdToken + Clone> {
     /// Whether banner ads should be included in the response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_banner_ad: Option<bool>,
+}
+
+impl<TS: ToString> From<&TS> for GetAdMetadata {
+    fn from(ad_token: &TS) -> Self {
+        Self {
+            ad_token: ad_token.to_string(),
+            return_ad_tracking_tokens: None,
+            support_audio_ads: None,
+            include_banner_ad: None,
+        }
+    }
 }
 
 /// ``` json
@@ -114,6 +125,14 @@ pub struct AudioStream {
     pub protocol: String,
 }
 
+/// Convenience function to do a basic getAdMetadata call.
+pub fn get_ad_metadata<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    ad_token: &str,
+) -> Result<GetAdMetadataResponse, Error> {
+    GetAdMetadata::from(&ad_token).response(session)
+}
+
 /// Register the tracking tokens associated with the advertisement. The theory is that this should be done just as the advertisement is about to play.
 ///
 /// | Name | Type | Description |
@@ -126,11 +145,27 @@ pub struct AudioStream {
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
 #[serde(rename_all = "camelCase")]
-pub struct RegisterAd<S: ToStationToken + Clone> {
+pub struct RegisterAd {
     /// The station id token that the ad is associated with.
-    pub station_id: S,
+    pub station_id: String,
     /// The ad tracking tokens for the ad.
     pub ad_tracking_tokens: Vec<String>,
+}
+
+impl RegisterAd {
+    /// Add a tracking token to the list of ad tracking tokens for this request.
+    pub fn add_tracking_token(&mut self, token: &str) {
+        self.ad_tracking_tokens.push(token.to_string())
+    }
+}
+
+impl<TS: ToString> From<&TS> for RegisterAd {
+    fn from(station_id: &TS) -> Self {
+        Self {
+            station_id: station_id.to_string(),
+            ad_tracking_tokens: Vec::new(),
+        }
+    }
 }
 
 /// There's no known response to data to this request.
@@ -139,4 +174,15 @@ pub struct RegisterAd<S: ToStationToken + Clone> {
 pub struct RegisterAdResponse {
     /// The fields of the registerAd response are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic registerAd call.
+pub fn register_ad<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_id: &str,
+    ad_tracking_tokens: Vec<String>,
+) -> Result<RegisterAdResponse, Error> {
+    let mut request = RegisterAd::from(&station_id);
+    request.ad_tracking_tokens = ad_tracking_tokens;
+    request.response(session)
 }

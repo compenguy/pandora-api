@@ -9,7 +9,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, Timestamp};
+use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens};
 
 /// | Name | Type | Description |
 /// | trackToken | string | |
@@ -25,6 +25,14 @@ use crate::json::{PandoraApiRequest, Timestamp};
 pub struct AddArtistBookmark {
     /// The unique id (token) for this track.
     pub track_token: String,
+}
+
+impl<TS: ToString> From<&TS> for AddArtistBookmark {
+    fn from(track_token: &TS) -> Self {
+        Self {
+            track_token: track_token.to_string(),
+        }
+    }
 }
 
 ///
@@ -66,6 +74,14 @@ pub struct AddArtistBookmarkResponse {
     pub music_token: String,
 }
 
+/// Convenience function to do a basic addArtistBookmark call.
+pub fn add_artist_bookmark<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    track_token: &str,
+) -> Result<AddArtistBookmarkResponse, Error> {
+    AddArtistBookmark::from(&track_token).response(session)
+}
+
 /// | Name | Type | Description |
 /// | trackToken | string | |
 /// ``` json
@@ -80,6 +96,14 @@ pub struct AddArtistBookmarkResponse {
 pub struct AddSongBookmark {
     /// The unique id (token) for this track.
     pub track_token: String,
+}
+
+impl<TS: ToString> From<&TS> for AddSongBookmark {
+    fn from(track_token: &TS) -> Self {
+        Self {
+            track_token: track_token.to_string(),
+        }
+    }
 }
 
 ///
@@ -133,16 +157,99 @@ pub struct AddSongBookmarkResponse {
     pub artist_name: String,
 }
 
+/// Convenience function to do a basic addSongBookmark call.
+pub fn add_song_bookmark<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    track_token: &str,
+) -> Result<AddSongBookmarkResponse, Error> {
+    AddSongBookmark::from(&track_token).response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [bookmark.deleteArtistBookmark()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn delete_artist_bookmark() {
-    unimplemented!();
+pub struct DeleteArtistBookmarkUnsupported {}
+
+/// Bookmarks can be deleted
+///
+/// | Name |   Type |   Description |
+/// | bookmarkToken | string |  |
+/// ``` json
+/// {
+///     "bookmarkToken": "3738252050522320365",
+///     "userAuthToken": "XXX",
+///     "syncTime": 1404910760
+/// }
+/// ```
+#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteArtistBookmark {
+    /// The unique id (token) for the bookmark submission that should be deleted.
+    pub bookmark_token: String,
+}
+
+impl<TS: ToString> From<&TS> for DeleteArtistBookmark {
+    fn from(bookmark_token: &TS) -> Self {
+        Self {
+            bookmark_token: bookmark_token.to_string(),
+        }
+    }
+}
+
+/// This method does not return data.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteArtistBookmarkResponse {
+    /// The fields of the deleteArtistBookmark response are unknown.
+    pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic deleteArtistBookmark call.
+pub fn delete_artist_bookmark<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    bookmark_token: &str,
+) -> Result<DeleteArtistBookmarkResponse, Error> {
+    DeleteArtistBookmark::from(&bookmark_token).response(session)
 }
 
 /// **Unsupported!**
 /// Undocumented method
 /// [bookmark.deleteSongBookmark()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn delete_song_bookmark() {
-    unimplemented!();
+pub struct DeleteSongBookmarkUnsupported {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json::{
+        station::get_playlist, tests::session_login, user::get_station_list, Partner,
+    };
+
+    #[test]
+    fn bookmark_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        if let Some(station) = get_station_list(&session).expect("Failed getting station list to look up a track to bookmark").stations.first() {
+            if let Some(track) = get_playlist(&session, &station.station_token)
+                .expect("Failed completing request for playlist")
+                .items
+                .iter()
+                .flat_map(|p| p.get_track())
+                .next()
+            {
+                let bookmark = add_artist_bookmark(&session, &track.track_token)
+                    .expect("Failed submitting bookmark creation request");
+                println!("Bookmark creation result: {:?}", bookmark);
+                let del_bookmark = delete_artist_bookmark(&session, &bookmark.bookmark_token)
+                    .expect("Failed submitting bookmark deletion request");
+                println!("Bookmark deletion result: {:?}", del_bookmark);
+            } else {
+                panic!("Playlist request returned no bookmarkable results.");
+            }
+        } else {
+            panic!("Station list request returned no results, so no bookmarkable content.");
+        }
+        // TODO: create bookmark for song
+        // TODO: delete bookmark for song
+    }
 }

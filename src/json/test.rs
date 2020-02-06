@@ -7,7 +7,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::PandoraApiRequest;
+use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 
 /// Check whether Pandora is available in the connecting client’s country,
 /// based on geoip database.  This is not strictly required since Partner
@@ -15,6 +15,19 @@ use crate::json::PandoraApiRequest;
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckLicensing {}
+
+impl CheckLicensing {
+    /// Create a new AddFeedback.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for CheckLicensing {
+    fn default() -> Self {
+        Self {}
+    }
+}
 
 ///
 /// | Name    | Type  |   Description |
@@ -26,32 +39,30 @@ pub struct CheckLicensingResponse {
     pub is_allowed: bool,
 }
 
+/// Convenience function to check geographic licensing restrictions.
+pub fn check_licensing<S: ToSessionTokens>(
+    session: &PandoraSession<S>,
+) -> Result<CheckLicensingResponse, Error> {
+    CheckLicensing::default().response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [test.echo()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn echo() {
-    unimplemented!();
-}
+pub struct EchoUnsuported {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json::{PandoraRequestBuilder, Partner, ToEndpoint};
+    use crate::json::{tests::session_login, Partner};
 
     #[test]
     fn licensing_check_test() {
-        let client = reqwest::blocking::Client::new();
         let partner = Partner::default();
-        let pandora_request_builder = PandoraRequestBuilder::with_session(
-            Some(client),
-            partner.to_endpoint(),
-            partner.to_session_data(),
-        );
+        let session = session_login(&partner).expect("Failed initializing login session");
 
-        let licensing_check = CheckLicensing {};
-        let response: CheckLicensingResponse = licensing_check
-            .response(&pandora_request_builder)
-            .expect("Error making test.checkLicensing request");
-        println!("test.checkLicensing() => {:?}", response);
+        let check_licensing_response =
+            check_licensing(&session).expect("Error making test.checkLicensing request");
+        println!("test.checkLicensing() => {:?}", check_licensing_response);
     }
 }

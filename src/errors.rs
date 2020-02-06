@@ -21,6 +21,8 @@ pub enum Error {
     PandoraJsonRequestError(JsonError),
     /// Invalid/unsupported audio format was specified
     InvalidAudioFormat(String),
+    /// Invalid/unsupported gender string was specified
+    InvalidUserGender(String),
 }
 
 impl std::error::Error for Error {
@@ -31,6 +33,7 @@ impl std::error::Error for Error {
             Error::HttpIoError(e) => Some(e),
             Error::PandoraJsonRequestError(e) => Some(e),
             Error::InvalidAudioFormat(_) => None,
+            Error::InvalidUserGender(_) => None,
         }
     }
 }
@@ -45,6 +48,7 @@ impl std::fmt::Display for Error {
             Error::InvalidAudioFormat(fmt) => {
                 write!(f, "Invalid/unsupported audio format: {}", fmt)
             }
+            Error::InvalidUserGender(fmt) => write!(f, "Invalid/unsupported gender value: {}", fmt),
         }
     }
 }

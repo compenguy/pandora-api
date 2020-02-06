@@ -3,6 +3,12 @@ Track support methods.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
 
+use pandora_api_derive::PandoraRequest;
+use serde::{Deserialize, Serialize};
+
+use crate::errors::Error;
+use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+
 /// Get (incomplete) list of attributes assigned to song by Music Genome Project.
 ///
 /// | Name | Type | Description |
@@ -14,6 +20,21 @@ Track support methods.
 ///     "syncTime": 1336675993
 /// }
 /// ```
+#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainTrack {
+    /// The token associated with the track for which an explanation is being requested.
+    pub track_token: String,
+}
+
+impl<TS: ToString> From<&TS> for ExplainTrack {
+    fn from(track_token: &TS) -> Self {
+        Self {
+            track_token: track_token.to_string(),
+        }
+    }
+}
+
 /// The request returns a list of attributes. Note that the last item is not an actual attribute.
 ///
 /// | Name | Type | Description |
@@ -33,11 +54,32 @@ Track support methods.
 ///     }
 /// }
 /// ```
-pub fn explain_track() {}
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplainTrackResponse {
+    /// A list of explanations for why the track was chosen.
+    explanations: Vec<Explanation>,
+}
+
+/// Describes traits of a track that would explain why it's recommended.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Explanation {
+    /// Text description of the audio trait for which the track was chosen.
+    pub focus_trait_name: String,
+    /// A token or identifier associated with the audio trait.
+    pub focus_trait_id: String,
+}
+
+/// Convenience function to do a basic explainTrack call.
+pub fn explain_track<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    track_token: &str,
+) -> Result<ExplainTrackResponse, Error> {
+    ExplainTrack::from(&track_token).response(session)
+}
 
 /// **Unsupported!**
 /// Undocumented method
 /// [track.trackStarted()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn track_started() {
-    unimplemented!();
-}
+pub struct TrackStartedUnsupported {}

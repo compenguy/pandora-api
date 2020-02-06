@@ -11,7 +11,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, Timestamp};
+use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens};
 
 /// Songs can be “loved” or “banned”. Both influence the music played on the
 /// station. Banned songs are never played again on this particular station.
@@ -41,6 +41,27 @@ pub struct AddFeedback {
     pub track_token: String,
     /// Whether feedback is positive (true) or negative (false).
     pub is_positive: bool,
+}
+
+impl AddFeedback {
+    /// Create a new AddFeedback with some values.
+    pub fn new(station_token: &str, track_token: &str, is_positive: bool) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+            track_token: track_token.to_string(),
+            is_positive,
+        }
+    }
+
+    /// Create a new AddFeedback with some values, and positive feedback.
+    pub fn new_positive(station_token: &str, track_token: &str) -> Self {
+        Self::new(station_token, track_token, true)
+    }
+
+    /// Create a new AddFeedback with some values, and negative feedback.
+    pub fn new_negative(station_token: &str, track_token: &str) -> Self {
+        Self::new(station_token, track_token, false)
+    }
 }
 
 ///
@@ -106,6 +127,16 @@ pub struct AddFeedbackResponse {
     pub station_personalization_percent: u8,
 }
 
+/// Convenience function to do a basic addFeedback call.
+pub fn add_feedback<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+    track_token: &str,
+    is_positive: bool,
+) -> Result<AddFeedbackResponse, Error> {
+    AddFeedback::new(station_token, track_token, is_positive).response(session)
+}
+
 /// music-search results can be used to add new seeds to an existing station.
 ///
 /// | Name | Type | Description |
@@ -128,6 +159,16 @@ pub struct AddMusic {
     /// the station.  Artist tokens start with 'R', composers with 'C', songs
     /// with 'S', and genres with 'G'.
     pub music_token: String,
+}
+
+impl AddMusic {
+    /// Create a new AddMusic with some values.
+    pub fn new(station_token: &str, music_token: &str) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+            music_token: music_token.to_string(),
+        }
+    }
 }
 
 ///
@@ -158,6 +199,15 @@ pub struct AddMusicResponse {
     pub art_url: String,
 }
 
+/// Convenience function to do a basic addMusic call.
+pub fn add_music<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+    music_token: &str,
+) -> Result<AddMusicResponse, Error> {
+    AddMusic::new(station_token, music_token).response(session)
+}
+
 /// Stations can either be created with a musicToken obtained by Search or
 /// trackToken from playlists (Retrieve playlist). The latter needs a musicType
 /// to specify whether the track itself or its artist should be used as seed.
@@ -181,6 +231,27 @@ pub struct CreateStation {
     pub music_type: MusicType,
 }
 
+impl CreateStation {
+    /// Create a new CreateStation with some values.
+    pub fn new(track_token: &str, music_token: &str, music_type: MusicType) -> Self {
+        Self {
+            track_token: track_token.to_string(),
+            music_token: music_token.to_string(),
+            music_type,
+        }
+    }
+
+    /// Create a new CreateStation for a song with some values.
+    pub fn new_song(track_token: &str, music_token: &str) -> Self {
+        Self::new(track_token, music_token, MusicType::Song)
+    }
+
+    /// Create a new CreateStation for an artist with some values.
+    pub fn new_artist(track_token: &str, music_token: &str) -> Self {
+        Self::new(track_token, music_token, MusicType::Artist)
+    }
+}
+
 /// Used for selecting whether a musicToken should be interpreted
 /// as referring to the associated artist or the associated song.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +269,24 @@ pub enum MusicType {
 pub struct CreateStationResponse {
     /// The fields of the createStation response are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic createStation call.
+pub fn create_station_from_song<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    track_token: &str,
+    music_token: &str,
+) -> Result<CreateStationResponse, Error> {
+    CreateStation::new_song(track_token, music_token).response(session)
+}
+
+/// Convenience function to do a basic createStation call.
+pub fn create_station_from_artist<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    track_token: &str,
+    music_token: &str,
+) -> Result<CreateStationResponse, Error> {
+    CreateStation::new_artist(track_token, music_token).response(session)
 }
 
 /// Feedback added by Rate track can be removed from the station.
@@ -218,12 +307,28 @@ pub struct DeleteFeedback {
     pub feedback_id: String,
 }
 
+impl<TS: ToString> From<&TS> for DeleteFeedback {
+    fn from(feedback_id: &TS) -> Self {
+        Self {
+            feedback_id: feedback_id.to_string(),
+        }
+    }
+}
+
 /// This method does not return data.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFeedbackResponse {
     /// The fields of the deleteFeedback response are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic deleteFeedback call.
+pub fn delete_feedback<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    feedback_id: &str,
+) -> Result<DeleteFeedbackResponse, Error> {
+    DeleteFeedback::from(&feedback_id).response(session)
 }
 
 /// Seeds can be removed from a station, except for the last one.
@@ -245,12 +350,28 @@ pub struct DeleteMusic {
     pub seed_id: String,
 }
 
+impl<TS: ToString> From<&TS> for DeleteMusic {
+    fn from(seed_id: &TS) -> Self {
+        Self {
+            seed_id: seed_id.to_string(),
+        }
+    }
+}
+
 /// This method does not return data.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteMusicResponse {
     /// The fields of the deleteMusic response are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic deleteMusic call.
+pub fn delete_music<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    seed_id: &str,
+) -> Result<DeleteMusicResponse, Error> {
+    DeleteMusic::from(&seed_id).response(session)
 }
 
 /// | Name   | Type  |  Description |
@@ -269,12 +390,28 @@ pub struct DeleteStation {
     pub station_token: String,
 }
 
+impl<TS: ToString> From<&TS> for DeleteStation {
+    fn from(station_token: &TS) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+        }
+    }
+}
+
 /// No data is returned in response.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteStationResponse {
     /// The fields of the deleteStation response are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic deleteStation call.
+pub fn delete_station<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+) -> Result<DeleteStationResponse, Error> {
+    DeleteStation::from(&station_token).response(session)
 }
 
 /// Check to see if the list of genre stations has changed.
@@ -286,6 +423,21 @@ pub struct DeleteStationResponse {
 pub struct GetGenreStationsChecksum {
     /// Unknown
     pub include_genre_category_ad_url: bool,
+}
+
+impl GetGenreStationsChecksum {
+    /// Create a new GetGenreStationsChecksum with some default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for GetGenreStationsChecksum {
+    fn default() -> Self {
+        Self {
+            include_genre_category_ad_url: false,
+        }
+    }
 }
 
 /// | Name   | Type  |  Description |
@@ -300,11 +452,31 @@ pub struct GetGenreStationsChecksumResponse {
     pub checksum: String,
 }
 
+/// Convenience function to do a basic getGenreStationsChecksum call.
+pub fn get_genre_stations_checksum<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+) -> Result<GetGenreStationsChecksumResponse, Error> {
+    GetGenreStationsChecksum::default().response(session)
+}
+
 /// Pandora provides a list of predefined stations ("genre stations").
 /// The request has no parameters.
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStations {}
+
+impl GetGenreStations {
+    /// Create a new GetGenreStations.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for GetGenreStations {
+    fn default() -> Self {
+        Self {}
+    }
+}
 
 /// Each station belongs to one category, usually a genre name. stationToken
 /// can be used as musicToken to create a new station with Create.
@@ -361,6 +533,13 @@ pub struct GenreStation {
     pub station_id: String,
 }
 
+/// Convenience function to do a basic getGenreStations call.
+pub fn get_genre_stations<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+) -> Result<GetGenreStationsResponse, Error> {
+    GetGenreStations::default().response(session)
+}
+
 /// This method must be sent over a TLS-encrypted connection.
 ///
 /// | Name | Type | Description |
@@ -401,6 +580,7 @@ pub struct GenreStation {
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetPlaylist {
     /// The unique id (token) for the station to request a playlist from
@@ -444,6 +624,27 @@ pub struct GetPlaylist {
     /// Unknown
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_ad_pod_capable: Option<bool>,
+}
+
+impl<TS: ToString> From<&TS> for GetPlaylist {
+    fn from(station_token: &TS) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+            additional_audio_url: Some(AudioFormat::Mp3128.to_string()),
+            station_is_starting: None,
+            include_track_length: None,
+            include_audio_token: None,
+            xplatform_ad_capable: None,
+            include_audio_receipt_url: None,
+            include_backstage_ad_url: None,
+            include_sharing_ad_url: None,
+            include_social_ad_url: None,
+            include_competitive_sep_indicator: None,
+            include_complete_playlist: None,
+            include_track_options: None,
+            audio_ad_pod_capable: None,
+        }
+    }
 }
 
 /// Valid values for additionalAudioUrl are:
@@ -601,6 +802,40 @@ pub enum PlaylistEntry {
     PlaylistTrack(PlaylistTrack),
 }
 
+impl PlaylistEntry {
+    /// Returns whether the playlist entry is an ad
+    pub fn is_ad(&self) -> bool {
+        match self {
+            PlaylistEntry::PlaylistAd(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether the playlist entry is a track
+    pub fn is_track(&self) -> bool {
+        match self {
+            PlaylistEntry::PlaylistTrack(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns the PlaylistAd object for this entry, if any
+    pub fn get_ad(&self) -> Option<PlaylistAd> {
+        match self {
+            PlaylistEntry::PlaylistAd(a) => Some(a.clone()),
+            _ => None,
+        }
+    }
+
+    /// Returns the PlaylistTrack object for this entry, if any
+    pub fn get_track(&self) -> Option<PlaylistTrack> {
+        match self {
+            PlaylistEntry::PlaylistTrack(t) => Some(t.clone()),
+            _ => None,
+        }
+    }
+}
+
 /// Represents an ad entry in a playlist.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -694,6 +929,14 @@ pub struct AudioStream {
     pub protocol: String,
 }
 
+/// Convenience function to do a basic getPlaylist call.
+pub fn get_playlist<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+) -> Result<GetPlaylistResponse, Error> {
+    GetPlaylist::from(&station_token).response(session)
+}
+
 /// Extended station information includes seeds and feedback.
 ///
 /// | Name | Type | Description |
@@ -715,6 +958,15 @@ pub struct GetStation {
     /// Include additional station attributes in the response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_extended_attributes: Option<bool>,
+}
+
+impl<TS: ToString> From<&TS> for GetStation {
+    fn from(station_token: &TS) -> Self {
+        GetStation {
+            station_token: station_token.to_string(),
+            include_extended_attributes: None,
+        }
+    }
 }
 
 /// | Name | Type | Description |
@@ -1034,12 +1286,18 @@ pub struct TrackFeedback {
     pub album_art_url: String,
 }
 
+/// Convenience function to do a basic getStation call.
+pub fn get_station<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+) -> Result<GetStationResponse, Error> {
+    GetStation::from(&station_token).response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [station.publishStationShare()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn publish_station_share() {
-    unimplemented!();
-}
+pub struct PublishStationShareUnsupported {}
 
 /// | Name   | Type |   Description |
 /// | stationToken  |  string | Existing station, see Retrieve station list |
@@ -1054,12 +1312,31 @@ pub struct RenameStation {
     pub station_name: String,
 }
 
+impl RenameStation {
+    /// Create a new RenameStation with some initial values.
+    pub fn new(station_token: &str, station_name: &str) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+            station_name: station_name.to_string(),
+        }
+    }
+}
+
 /// There's no known response data to this request.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameStationResponse {
     /// The fields of the renameStation response, if any, are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic renameStation call.
+pub fn rename_station<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+    station_name: &str,
+) -> Result<RenameStationResponse, Error> {
+    RenameStation::new(station_token, station_name).response(session)
 }
 
 /// Shares a station with the specified email addresses. that emails is a string array
@@ -1081,12 +1358,41 @@ pub struct ShareStation {
     pub emails: Vec<String>,
 }
 
+impl ShareStation {
+    /// Create a new RenameStation with some initial values.  Call
+    /// add_recipient() to add recipient emails to the request.
+    pub fn new(station_id: &str, station_token: &str) -> Self {
+        Self {
+            station_id: station_id.to_string(),
+            station_token: station_token.to_string(),
+            emails: Vec::new(),
+        }
+    }
+
+    /// Add a recipient email to the request.
+    pub fn add_recipient(&mut self, recipient: &str) {
+        self.emails.push(recipient.to_string());
+    }
+}
+
 /// There's no known response data to this request.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShareStationResponse {
     /// The fields of the shareStation response, if any, are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic shareStation call.
+pub fn share_station<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_id: &str,
+    station_token: &str,
+    emails: Vec<String>,
+) -> Result<ShareStationResponse, Error> {
+    let mut request = ShareStation::new(station_id, station_token);
+    request.emails = emails;
+    request.response(session)
 }
 
 /// Stations created by other users are added as reference to the user’s
@@ -1104,10 +1410,26 @@ pub struct TransformSharedStation {
     pub station_token: String,
 }
 
+impl<TS: ToString> From<&TS> for TransformSharedStation {
+    fn from(station_token: &TS) -> Self {
+        Self {
+            station_token: station_token.to_string(),
+        }
+    }
+}
+
 /// There's no known response data to this request.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformSharedStationResponse {
     /// The fields of the transformSharedStation response, if any, are unknown.
     pub unknown: Option<serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic transformSharedStation call.
+pub fn transform_shared_station<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    station_token: &str,
+) -> Result<TransformSharedStationResponse, Error> {
+    TransformSharedStation::from(&station_token).response(session)
 }

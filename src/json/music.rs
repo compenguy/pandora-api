@@ -7,28 +7,22 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::PandoraApiRequest;
+use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 
 /// **Unsupported!**
 /// Undocumented method
 /// [music.getSearchRecommendations()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn get_search_recommendations() {
-    unimplemented!();
-}
+pub struct GetSearchRecommendationsUnsupported {}
 
 /// **Unsupported!**
 /// Undocumented method
 /// [music.getTrack()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn get_track() {
-    unimplemented!();
-}
+pub struct GetTrackUnsupported {}
 
 /// **Unsupported!**
 /// Undocumented method
 /// [music.publishSongShare()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn publish_song_share() {
-    unimplemented!();
-}
+pub struct PublishSongShareUnsupported {}
 
 /// This is a free text search that matches artist and track names.
 ///
@@ -44,24 +38,35 @@ pub fn publish_song_share() {
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct Search {
     /// The text to search for in artist names or track titles.
     pub search_text: String,
+    /// Whether to include partial matches in the results
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_near_matches: Option<bool>,
+    /// Whether to include genre stations in the results
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_genre_stations: Option<bool>,
 }
 
-impl From<String> for Search {
-    fn from(search_text: String) -> Self {
-        Self { search_text }
-    }
-}
-
-impl From<&str> for Search {
-    fn from(search_text: &str) -> Self {
+impl<TS: ToString> From<&TS> for Search {
+    fn from(search_text: &TS) -> Self {
         Self {
             search_text: search_text.to_string(),
+            include_near_matches: None,
+            include_genre_stations: None,
         }
     }
+}
+
+/// Convenience function to do a basic addSongBookmark call.
+pub fn search<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    search_text: &str,
+) -> Result<SearchResponse, Error> {
+    Search::from(&search_text).response(session)
 }
 
 /// Matching songs, artists, and genre stations are returned in three separate lists.
@@ -106,7 +111,7 @@ pub struct SearchResponse {
     /// Artists matching the search.
     pub artists: Vec<ArtistMatch>,
     /// Genre stations matching the search.
-    pub genre_stations: Vec<GenreMatch>,
+    pub genre_stations: Option<Vec<GenreMatch>>,
 }
 
 /// Structure collecting the artist information returned
@@ -142,30 +147,23 @@ pub struct GenreMatch {
 /// **Unsupported!**
 /// Undocumented method
 /// [music.shareMusic()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn share_music() {
-    unimplemented!();
-}
+pub struct ShareMusicUnsupported {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json::{tests::session_login, PandoraRequestBuilder, Partner, ToEndpoint};
+    use crate::json::{tests::session_login, Partner};
 
     #[test]
     fn search_test() {
         let partner = Partner::default();
-        let mut pandora_request_builder = PandoraRequestBuilder::with_session(
-            None,
-            partner.to_endpoint(),
-            partner.to_session_data(),
-        );
-        session_login(&partner, &mut pandora_request_builder)
-            .expect("Failed while initiating login session");
+        let session = session_login(&partner).expect("Failed initializing login session");
 
-        let search_response: SearchResponse = Search::from("INXS")
-            .response(&pandora_request_builder)
+        let _search_response = search(&session, "INXS").expect("Failed completing search request");
+        let mut search = Search::from(&"Alternative");
+        search.include_genre_stations = Some(true);
+        let _search_response: SearchResponse = search
+            .response(&session)
             .expect("Failed completing search request");
-        println!("SearchResponse: {:?}", search_response);
-        panic!("At the disco!");
     }
 }

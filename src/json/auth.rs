@@ -9,21 +9,17 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::PandoraApiRequest;
+use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 
 /// **Unsupported!**
 /// Undocumented method
 /// [auth.getAdMetadata()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn get_ad_metadata() {
-    unimplemented!();
-}
+pub struct GetAdMetadataUnsupported {}
 
 /// **Unsupported!**
 /// Undocumented method
 /// [auth.partnerAdminLogin()](https://6xq.net/pandora-apidoc/json/methods/)
-pub fn partner_admin_login() {
-    unimplemented!();
-}
+pub struct PartnerAdminLoginUnsupported {}
 
 /// This request additionally serves as API version validation, time synchronization and endpoint detection and must be sent over a TLS-encrypted link. The POST body however is not encrypted.
 ///
@@ -65,6 +61,27 @@ pub struct PartnerLogin {
     /// Unknown field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_update_prompt_versions: Option<bool>,
+}
+
+impl PartnerLogin {
+    /// Create a new PartnerLogin with some values. All Optional fields are
+    /// set to None.
+    pub fn new(
+        username: &str,
+        password: &str,
+        device_model: &str,
+        version: Option<String>,
+    ) -> Self {
+        PartnerLogin {
+            username: username.to_string(),
+            password: password.to_string(),
+            device_model: device_model.to_string(),
+            version: version.unwrap_or_else(|| String::from("5")),
+            include_urls: None,
+            return_device_type: None,
+            return_update_prompt_versions: None,
+        }
+    }
 }
 
 /// syncTime is used to calculate the server time, see synctime. partnerId and authToken are required to proceed with user authentication.
@@ -114,6 +131,16 @@ pub struct PartnerLoginResponse {
     pub device_properties: HashMap<String, serde_json::value::Value>,
     /// Unknown field
     pub urls: Option<HashMap<String, String>>,
+}
+
+/// Convenience function to do a basic partnerLogin call.
+pub fn partner_login<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    username: &str,
+    password: &str,
+    device_model: &str,
+) -> Result<PartnerLoginResponse, Error> {
+    PartnerLogin::new(username, password, device_model, None).response(session)
 }
 
 /// This request *must* be sent over a TLS-encrypted link. It authenticates the Pandora user by sending his username, usually his email address, and password as well as the partnerAuthToken obtained by Partner login.
@@ -361,51 +388,24 @@ pub struct UserLoginResponse {
     pub minimum_ad_refresh_interval: u32,
 }
 
+/// Convenience function to perform a basic user login.
+pub fn user_login<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    username: &str,
+    password: &str,
+) -> Result<UserLoginResponse, Error> {
+    UserLogin::new(username, password).response(session)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::json::{
-        errors::JsonError, PandoraRequestBuilder, PandoraResponse, Partner, ToEndpoint,
-    };
+    use crate::json::{tests::session_login, Partner};
 
+    // Tests both PartnerLogin and UserLogin
     #[test]
     fn auth_test() {
-        let client = reqwest::blocking::Client::new();
         let partner = Partner::default();
-        let mut pandora_request_builder = PandoraRequestBuilder::with_session(
-            Some(client),
-            partner.to_endpoint(),
-            partner.to_session_data(),
-        );
-        let partner_login = partner.to_partner_login();
-        let partner_login_response: PartnerLoginResponse = partner_login
-            .response(&pandora_request_builder)
-            .expect("Failed during partner auth API request");
-        pandora_request_builder
-            .session_mut()
-            .map(|s| s.update_from_partner_login_response(&partner_login_response));
-
-        let test_username = include_str!("../../test_username.txt");
-        let test_password = include_str!("../../test_password.txt");
-        let user_login = UserLogin::new(test_username.trim(), test_password.trim());
-        let request_builder = user_login
-            .request(&pandora_request_builder)
-            .expect("Failed while executing request");
-        let request = request_builder.build().expect("Failed to build request");
-        let http_response = pandora_request_builder
-            .http_client()
-            .execute(request)
-            .expect("Failed while submitting request");
-        http_response
-            .error_for_status_ref()
-            .expect("Request returned http error");
-        let response_full: PandoraResponse<UserLoginResponse> = http_response
-            .json()
-            .expect("Failed extracting json body of response");
-        let result: std::result::Result<UserLoginResponse, JsonError> = response_full.into();
-        let response_content = result.expect("Request produced a Pandora JSON API Error");
-        pandora_request_builder
-            .session_mut()
-            .map(|s| s.update_from_user_login_response(&response_content));
+        let session = session_login(&partner).expect("Failed initializing login session");
+        println!("Session tokens: {:?}", session);
     }
 }
