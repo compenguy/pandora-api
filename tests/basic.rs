@@ -49,5 +49,11 @@ fn basic_session_test() {
     let _usage_info =
         user::get_usage_info(&session).expect("Failed while getting account usage information");
 
+    // Check user subscription status
+    let _can_subscribe =
+        user::can_subscribe(&session).expect("Failed while verifying account subscription status");
+
+    let _change_settings = user::change_settings(&session, &test_username, &test_password)
+        .expect("Failed while changing user settings");
     // TODO
 }

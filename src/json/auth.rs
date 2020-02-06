@@ -195,8 +195,8 @@ pub fn partner_login<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
-#[serde(rename_all = "camelCase")]
 #[pandora_request(encrypted = true)]
+#[serde(rename_all = "camelCase")]
 pub struct UserLogin {
     /// This field should always have the value `user`.
     pub login_type: String,

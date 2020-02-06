@@ -5,8 +5,8 @@ A station is a collection of one or more user-supplied seeds. Artists or tracks
 can be used as seed. Based on the seeds Pandora decides which music to play.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
-use std::convert::TryFrom;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens}
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddFeedback {
     /// The unique id (token) for the station on which the track should be rated.
@@ -152,6 +153,7 @@ pub fn add_feedback<T: ToSessionTokens>(
 ///     }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddMusic {
     /// The unique id (token) for the station on which the track should be rated.
@@ -218,6 +220,7 @@ pub fn add_music<T: ToSessionTokens>(
 /// | musicType  | string | “song” or “artist” (“song” for genre stations) |
 /// | musicToken | string | See Search |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateStation {
     /// The unique id (token) for the track around which the station should
@@ -303,6 +306,7 @@ pub fn create_station_from_artist<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFeedback {
     /// The unique id (token) for the feedback submission that should be deleted.
@@ -346,6 +350,7 @@ pub fn delete_feedback<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteMusic {
     /// The unique id (token) for the music seed that should be deleted
@@ -388,6 +393,7 @@ pub fn delete_music<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteStation {
     /// The unique id (token) for the station that should be deleted.
@@ -424,6 +430,7 @@ pub fn delete_station<T: ToSessionTokens>(
 /// | Name   | Type   | Description |
 /// | includeGenreCategoryAdUrl  | bool  |  (optional) |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStationsChecksum {
     /// Unknown
@@ -467,6 +474,7 @@ pub fn get_genre_stations_checksum<T: ToSessionTokens>(
 /// Pandora provides a list of predefined stations ("genre stations").
 /// The request has no parameters.
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStations {}
 
@@ -936,6 +944,7 @@ pub fn get_playlist<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetStation {
     /// The unique id (token) for the station to request information on.
@@ -1288,6 +1297,7 @@ pub struct PublishStationShareUnsupported {}
 /// | stationToken  |  string | Existing station, see Retrieve station list |
 /// | stationName | string | New station name |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameStation {
     /// The unique id (token) for the station that should be renamed.
@@ -1332,6 +1342,7 @@ pub fn rename_station<T: ToSessionTokens>(
 /// | stationToken |   string | See Retrieve station list |
 /// | emails | string[] |   A list of emails to share the station with |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ShareStation {
     /// The unique id (token) for the station that should be shared.
@@ -1389,6 +1400,7 @@ pub fn share_station<T: ToSessionTokens>(
 /// | Name   |  Type  |   Description |
 /// | stationToken  |   string |  See Retrieve station list |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformSharedStation {
     /// The unique id (token) for the shared station that should be converted to
@@ -1420,4 +1432,39 @@ pub fn transform_shared_station<T: ToSessionTokens>(
     station_token: &str,
 ) -> Result<TransformSharedStationResponse, Error> {
     TransformSharedStation::from(&station_token).response(session)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json::{tests::session_login, user::get_bookmarks, user::get_station_list, Partner};
+
+    // TODO: get_genre_stations, get_genre_stations_checksum
+    // TODO: create_station, get_station, rename_station, add_music, delete_music, delete_station
+    // TODO: share_station, transform_shared_station,
+    #[test]
+    fn station_feedback_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        if let Some(station) = get_station_list(&session)
+            .expect("Failed getting station list to look up a track to bookmark")
+            .stations
+            .first()
+        {
+            if let Some(track) = get_playlist(&session, &station.station_token)
+                .expect("Failed completing request for playlist")
+                .items
+                .iter()
+                .flat_map(|p| p.get_track())
+                .next()
+            {
+                todo!("add_feedback, delete_feedback");
+            } else {
+                panic!("Playlist request returned no feedback-capable results.");
+            }
+        } else {
+            panic!("Station list request returned no results, so no feedback-capable content.");
+        }
+    }
 }

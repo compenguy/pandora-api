@@ -17,7 +17,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 pub struct CheckLicensing {}
 
 impl CheckLicensing {
-    /// Create a new AddFeedback.
+    /// Create a new CheckLicensing.
     pub fn new() -> Self {
         Self::default()
     }

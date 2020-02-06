@@ -190,9 +190,11 @@ impl<T: ToSessionTokens> PandoraSession<T> {
 
         self.add_session_tokens_to_json();
         let mut body: String = self.json.to_string();
+        //println!("Request body: {:?}", body);
         if self.encrypted {
             if let Some(tokens) = &self.tokens {
                 body = tokens.encrypt(&body);
+                //println!("Encrypted body: {:?}", body);
             }
         }
 
@@ -216,7 +218,9 @@ pub struct PandoraResponse<T> {
     pub code: Option<u32>,
 }
 
-impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>> for PandoraResponse<T> {
+impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>>
+    for PandoraResponse<T>
+{
     fn into(self) -> std::result::Result<T, JsonError> {
         match self {
             PandoraResponse {
@@ -232,7 +236,7 @@ impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>> for
                 let default_value = serde_json::json!({});
                 let deser = serde_json::from_value(default_value);
                 deser.map_err(|_| JsonError::new(None, Some(String::from("Invalid JSON content."))))
-            },
+            }
             PandoraResponse { code, message, .. } => Err(JsonError::new(code, message)),
         }
     }
@@ -285,7 +289,6 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         tmp_session
             .arg("method", &self.get_method())
             .json(self.get_json()?);
-        println!("Request: {:?}", tmp_session.json_mut());
         if self.encrypt_request() {
             tmp_session.encrypted();
         }
@@ -301,13 +304,15 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         let response = self.request(session)?.send().map_err(Self::Error::from)?;
         response.error_for_status_ref().map_err(Self::Error::from)?;
 
-        /*
+        /* Debugging support - output full response text before attempting
+         * deserialization
         let response_body = response.text()?;
         println!("Response: {:?}", response_body);
         let response_obj: PandoraResponse<Self::Response> = serde_json::from_slice(response_body.as_bytes())?;
         */
         let response_obj: PandoraResponse<Self::Response> = response.json()?;
-        println!("Response: {:?}", response_obj);
+        //println!("Response: {:?}", response_obj);
+
         let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
         result.map_err(Self::Error::from)
     }

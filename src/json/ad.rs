@@ -25,6 +25,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 /// | supportAudioAds | boolean | audioUrl links for the ads are included in the results if set to ‘True’. (optional) |
 /// | includeBannerAd | boolean | bannerAdMap containing an HTML fragment that can be embedded in web pages is included in the results if set to ‘True’. (optional) |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAdMetadata {
     /// The ad token associated with the ad for which metadata is being requested.
@@ -144,6 +145,7 @@ pub fn get_ad_metadata<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterAd {
     /// The station id token that the ad is associated with.
@@ -186,4 +188,17 @@ pub fn register_ad<T: ToSessionTokens>(
     let mut request = RegisterAd::from(&station_id);
     request.ad_tracking_tokens = ad_tracking_tokens;
     request.response(session)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::json::{tests::session_login, Partner};
+
+    #[test]
+    fn ad_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        todo!("Write an actual ad test.");
+    }
 }

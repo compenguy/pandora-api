@@ -24,8 +24,8 @@ The following settings are currently read/writeable:
 | facebookSettingChecksum | boolean   | |
 */
 // SPDX-License-Identifier: MIT AND WTFPL
-use std::convert::TryFrom;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
@@ -95,6 +95,7 @@ pub struct AuthorizeFacebookUnsupported {}
 /// | Name | Type | Description |
 /// | iapVendor | string | (optional) |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CanSubscribe {
     /// Name of the in-app purchases vendor.
@@ -135,6 +136,13 @@ pub struct CanSubscribeResponse {
     pub can_subscribe: bool,
     /// Whether this account has a valid subscription to Pandora One.
     pub is_subscriber: bool,
+}
+
+/// Convenience function to do a basic canSubscribe call.
+pub fn can_subscribe<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+) -> Result<CanSubscribeResponse, Error> {
+    CanSubscribe::new().response(session)
 }
 
 /// | Name   |  Type    Description |
@@ -250,6 +258,17 @@ pub struct ChangeSettingsResponse {
     pub optional: HashMap<String, serde_json::value::Value>,
 }
 
+/// Convenience function to do a basic canSubscribe call. This function
+/// is basically useless for actually changing settings, but is useful
+/// to return the current values for user account settings.
+pub fn change_settings<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    username: &str,
+    password: &str,
+) -> Result<ChangeSettingsResponse, Error> {
+    ChangeSettings::new(username, password).response(session)
+}
+
 /// | Name    | Type  |  Description   |
 /// | username |    string       | |
 /// | password  |   string       | |
@@ -354,6 +373,27 @@ pub struct CreateUserResponse {
     pub optional: HashMap<String, serde_json::value::Value>,
 }
 
+/// Convenience function to do a basic emailPassword call.
+pub fn create_user<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    username: &str,
+    password: &str,
+    gender: UserGender,
+    birth_year: u32,
+    zip_code: &str,
+    country_code: &str,
+) -> Result<CreateUserResponse, Error> {
+    CreateUser::new(
+        username,
+        password,
+        gender,
+        birth_year,
+        zip_code,
+        country_code,
+    )
+    .response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [user.disconnectFacebook()](https://6xq.net/pandora-apidoc/json/methods/)
@@ -386,6 +426,14 @@ pub struct EmailPasswordResponse {
     pub optional: HashMap<String, serde_json::value::Value>,
 }
 
+/// Convenience function to do a basic emailPassword call.
+pub fn email_password<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    username: &str,
+) -> Result<EmailPasswordResponse, Error> {
+    EmailPassword::from(&username).response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [user.facebookAuthFailed()](https://6xq.net/pandora-apidoc/json/methods/)
@@ -393,6 +441,7 @@ pub struct FacebookAuthFailedUnsupported {}
 
 /// The request has no parameters.
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetBookmarks {}
 
@@ -552,6 +601,13 @@ pub struct SongBookmark {
     pub date_created: Timestamp,
 }
 
+/// Convenience function to do a basic getBookmarks call.
+pub fn get_bookmarks<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+) -> Result<GetBookmarksResponse, Error> {
+    GetBookmarks::new().response(session)
+}
+
 /// **Unsupported!**
 /// Undocumented method
 /// [user.getFacebookInfo()](https://6xq.net/pandora-apidoc/json/methods/)
@@ -560,6 +616,7 @@ pub struct GetFacebookInfoUnsupported {}
 /// | Name   |  Type   |  Description |
 /// | includeFacebook | boolean   | |
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSettings {
     /// Whether to include Facebook settings in the response.
@@ -592,36 +649,16 @@ impl Default for GetSettings {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSettingsResponse {
-    /// Account-holder gender, Male or Female.
-    pub gender: String,
-    /// Account-holder birth year.
-    pub birth_year: u32,
-    /// Account-holder zip code.
-    pub zip_code: String,
-    /// Whether the account information is private.
-    pub is_profile_private: bool,
-    /// Whether other users are able to leave comments on your account.
-    pub enable_comments: bool,
-    /// Whether the account-holder is opted into e-mail communications.
-    pub email_opt_in: bool,
-    /// Unknown.
-    pub email_comments: bool,
-    /// Unknown.
-    pub email_new_followers: bool,
-    /// Unknown.
-    pub is_explicit_content_filter_enabled: bool,
-    /// Unknown.
-    pub is_explicit_content_filter_pin_protected: bool,
-    /// Unknown.
-    pub facebook_auto_share_enabled: bool,
-    /// Unknown.
-    pub auto_share_track_play: bool,
-    /// Unknown.
-    pub auto_share_likes: bool,
-    /// Unknown.
-    pub auto_share_follows: bool,
-    /// Unknown.
-    pub facebook_setting_checksum: bool,
+    /// The fields of the setQuickMix response are unknown.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic getSettings call.
+pub fn get_settings<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+) -> Result<GetSettingsResponse, Error> {
+    GetSettings::new().response(session)
 }
 
 /// To check if the station list was modified by another client the checksum
@@ -1123,4 +1160,88 @@ pub fn validate_username<S: ToSessionTokens>(
         username: username.to_string(),
     }
     .response(session)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::errors;
+    use crate::json::{errors::JsonErrorKind, tests::session_login, Partner};
+
+    #[test]
+    fn user_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        let _can_subscribe =
+            can_subscribe(&session).expect("Failed submitting subscription information request");
+
+        let _get_settings =
+            get_settings(&session).expect("Failed submitting settings info request");
+
+        let test_username_raw = include_str!("../../test_username.txt");
+        let test_username = test_username_raw.trim();
+        let test_password_raw = include_str!("../../test_password.txt");
+        let test_password = test_password_raw.trim();
+
+        let _change_settings = change_settings(&session, &test_username, &test_password)
+            .expect("Failed submitting settings change request");
+    }
+
+    /* This test might trigger e-mail-based account recovery, which we probably
+     * don't want to do automatically as a test.
+    #[test]
+    fn email_password_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        let email_password = email_password(&session).expect("Failed submitting settings change request");
+    }
+    */
+
+    #[test]
+    #[should_panic(expected = "Invalid country code.")]
+    fn create_user_test() {
+        let partner = Partner::default();
+        let mut session = partner.init_session();
+        let partner_login = partner
+            .login(&session)
+            .expect("Failed completing partner login");
+        session
+            .tokens_mut()
+            .map(|s| s.update_from_partner_login_response(&partner_login));
+
+        let test_username_raw = include_str!("../../test_username.txt");
+        let test_username = test_username_raw.trim();
+        let test_password_raw = include_str!("../../test_password.txt");
+        let test_password = test_password_raw.trim();
+
+        let test_gender = UserGender::Male;
+        let test_birth = 1970u32;
+        let test_zip = "90210";
+        // I can't figure out a valid country code to use, so we'll write this
+        // test in the negative and check for the correct error for invalid
+        // country code.
+        let test_cc = "US";
+
+        // Theory is that the above credentials are for an existing account,
+        // so this should fail as a duplicate account.
+        match create_user(
+            &session,
+            &test_username,
+            &test_password,
+            test_gender,
+            test_birth,
+            test_zip,
+            test_cc,
+        ) {
+            Ok(cu) => println!("User successfully created? {:?}", cu),
+            Err(errors::Error::PandoraJsonRequestError(e))
+                if e.kind() == JsonErrorKind::InvalidCountryCode =>
+            {
+                panic!("Invalid country code.")
+            }
+            Err(e) => panic!("Unexpected request error: {:?}", e),
+        }
+    }
 }

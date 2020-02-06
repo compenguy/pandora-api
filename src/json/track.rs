@@ -21,6 +21,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplainTrack {
     /// The token associated with the track for which an explanation is being requested.
@@ -83,3 +84,39 @@ pub fn explain_track<T: ToSessionTokens>(
 /// Undocumented method
 /// [track.trackStarted()](https://6xq.net/pandora-apidoc/json/methods/)
 pub struct TrackStartedUnsupported {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json::{
+        station::get_playlist, tests::session_login, user::get_station_list, Partner,
+    };
+
+    #[test]
+    fn explain_track_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        if let Some(station) = get_station_list(&session)
+            .expect("Failed getting station list to look up a track to bookmark")
+            .stations
+            .first()
+        {
+            if let Some(track) = get_playlist(&session, &station.station_token)
+                .expect("Failed completing request for playlist")
+                .items
+                .iter()
+                .flat_map(|p| p.get_track())
+                .next()
+            {
+                let explain_track = explain_track(&session, &track.track_token)
+                    .expect("Failed submitting track explanation request");
+                println!("Track explanation: {:?}", explain_track);
+            } else {
+                panic!("Playlist request returned no explainable results.");
+            }
+        } else {
+            panic!("Station list request returned no results, so no explanable content.");
+        }
+    }
+}

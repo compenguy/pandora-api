@@ -4,7 +4,7 @@ Error codes that can be returned by the Pandora API.
 // SPDX-License-Identifier: MIT AND WTFPL
 
 /// https://6xq.net/pandora-apidoc/json/errorcodes/
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum JsonErrorKind {
     /// Code 0 - Internal error. It can denote that your account has been temporarily blocked due to having
     /// too frequent station.getPlaylist calls.
@@ -243,13 +243,18 @@ pub struct JsonError {
 }
 
 impl JsonError {
-    /// Initialize a JsonError from some combination of code and message
+    /// Initialize a JsonError from some combination of code and message.
     pub fn new(code: Option<u32>, message: Option<String>) -> Self {
         let kind = match code {
             Some(code) => JsonErrorKind::from(code),
             None => JsonErrorKind::UnknownErrorMessage,
         };
         JsonError { kind, message }
+    }
+
+    /// Return what kind of error this is.
+    pub fn kind(&self) -> JsonErrorKind {
+        self.kind
     }
 }
 
