@@ -4,7 +4,6 @@ Bookmark support messages.
 Users can bookmark artists or songs.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
-
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +20,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens}
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddArtistBookmark {
     /// The unique id (token) for this track.
@@ -92,6 +92,7 @@ pub fn add_artist_bookmark<T: ToSessionTokens>(
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddSongBookmark {
     /// The unique id (token) for this track.
@@ -182,6 +183,7 @@ pub struct DeleteArtistBookmarkUnsupported {}
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteArtistBookmark {
     /// The unique id (token) for the bookmark submission that should be deleted.
@@ -200,8 +202,11 @@ impl<TS: ToString> From<&TS> for DeleteArtistBookmark {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteArtistBookmarkResponse {
+    /*
     /// The fields of the deleteArtistBookmark response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+    */
 }
 
 /// Convenience function to do a basic deleteArtistBookmark call.

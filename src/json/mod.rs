@@ -216,7 +216,7 @@ pub struct PandoraResponse<T> {
     pub code: Option<u32>,
 }
 
-impl<T> Into<std::result::Result<T, JsonError>> for PandoraResponse<T> {
+impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>> for PandoraResponse<T> {
     fn into(self) -> std::result::Result<T, JsonError> {
         match self {
             PandoraResponse {
@@ -224,6 +224,15 @@ impl<T> Into<std::result::Result<T, JsonError>> for PandoraResponse<T> {
                 result: Some(result),
                 ..
             } => Ok(result),
+            PandoraResponse {
+                stat: PandoraStatus::Ok,
+                result: None,
+                ..
+            } => {
+                let default_value = serde_json::json!({});
+                let deser = serde_json::from_value(default_value);
+                deser.map_err(|_| JsonError::new(None, Some(String::from("Invalid JSON content."))))
+            },
             PandoraResponse { code, message, .. } => Err(JsonError::new(code, message)),
         }
     }
@@ -292,12 +301,12 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         let response = self.request(session)?.send().map_err(Self::Error::from)?;
         response.error_for_status_ref().map_err(Self::Error::from)?;
 
+        /*
         let response_body = response.text()?;
         println!("Response: {:?}", response_body);
         let response_obj: PandoraResponse<Self::Response> = serde_json::from_slice(response_body.as_bytes())?;
-        /*
-        let response_obj: PandoraResponse<Self::Response> = response.json()?;
         */
+        let response_obj: PandoraResponse<Self::Response> = response.json()?;
         println!("Response: {:?}", response_obj);
         let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
         result.map_err(Self::Error::from)

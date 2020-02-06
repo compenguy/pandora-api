@@ -173,7 +173,8 @@ impl<TS: ToString> From<&TS> for RegisterAd {
 #[serde(rename_all = "camelCase")]
 pub struct RegisterAdResponse {
     /// The fields of the registerAd response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic registerAd call.

@@ -6,6 +6,7 @@ can be used as seed. Based on the seeds Pandora decides which music to play.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
 use std::convert::TryFrom;
+use std::collections::HashMap;
 
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
@@ -268,7 +269,8 @@ pub enum MusicType {
 #[serde(rename_all = "camelCase")]
 pub struct CreateStationResponse {
     /// The fields of the createStation response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic createStation call.
@@ -320,7 +322,8 @@ impl<TS: ToString> From<&TS> for DeleteFeedback {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFeedbackResponse {
     /// The fields of the deleteFeedback response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic deleteFeedback call.
@@ -363,7 +366,8 @@ impl<TS: ToString> From<&TS> for DeleteMusic {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteMusicResponse {
     /// The fields of the deleteMusic response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic deleteMusic call.
@@ -403,7 +407,8 @@ impl<TS: ToString> From<&TS> for DeleteStation {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteStationResponse {
     /// The fields of the deleteStation response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic deleteStation call.
@@ -842,6 +847,9 @@ impl PlaylistEntry {
 pub struct PlaylistAd {
     /// The unique id (token) for the ad which should be played.
     pub ad_token: String,
+    /// Additional, optional fields in the response
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Represents a track (song) entry in a playlist.
@@ -856,7 +864,9 @@ pub struct PlaylistTrack {
     /// The default audio streams available for this track.
     pub audio_url_map: AudioQuality,
     /// Additional audio stream formats requested for this track.
-    pub additional_audio_url: Vec<String>,
+    /// NOTE: This field is documented as able to be a String
+    /// or a Vec<String>.
+    pub additional_audio_url: String,
     /// A floating point value, encoded as a string, representing the track gain
     /// that should be applied for playback.
     pub track_gain: String,
@@ -868,34 +878,9 @@ pub struct PlaylistTrack {
     pub song_name: String,
     /// The rating of the song for this track.
     pub song_rating: u32,
-    /// Whether this track allows submitting feedback.
-    pub allow_feedback: Option<bool>,
-    /// Unknown
-    pub song_explorer_url: Option<String>,
-    /// Unknown
-    pub artist_explorer_url: Option<String>,
-    /// Unknown
-    pub album_explorer_url: Option<String>,
-    /// Unknown
-    pub album_art_url: Option<String>,
-    /// Unknown
-    pub song_detail_url: Option<String>,
-    /// Unknown
-    pub artist_detail_url: Option<String>,
-    /// Unknown
-    pub album_detail_url: Option<String>,
-    /// URL to lookup/buy song on iTunes.
-    pub itunes_song_url: Option<String>,
-    /// URL to lookup/buy song on Amazon.
-    pub amazon_song_digital_asin: Option<String>,
-    /// URL to lookup/buy album on Amazon.
-    pub amazon_album_url: Option<String>,
-    /// Amazon product code for the album product.
-    pub amazon_album_asin: Option<String>,
-    /// Amazon product code for the digital album product.
-    pub amazon_album_digital_asin: Option<String>,
-    /// Unknown
-    pub now_playing_station_ad_url: Option<String>,
+    /// Additional, optional fields in the response
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 ///                  "lowQuality": {
@@ -1327,7 +1312,8 @@ impl RenameStation {
 #[serde(rename_all = "camelCase")]
 pub struct RenameStationResponse {
     /// The fields of the renameStation response, if any, are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic renameStation call.
@@ -1380,7 +1366,8 @@ impl ShareStation {
 #[serde(rename_all = "camelCase")]
 pub struct ShareStationResponse {
     /// The fields of the shareStation response, if any, are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic shareStation call.
@@ -1423,7 +1410,8 @@ impl<TS: ToString> From<&TS> for TransformSharedStation {
 #[serde(rename_all = "camelCase")]
 pub struct TransformSharedStationResponse {
     /// The fields of the transformSharedStation response, if any, are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic transformSharedStation call.

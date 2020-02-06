@@ -25,6 +25,7 @@ The following settings are currently read/writeable:
 */
 // SPDX-License-Identifier: MIT AND WTFPL
 use std::convert::TryFrom;
+use std::collections::HashMap;
 
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
@@ -245,7 +246,8 @@ impl ChangeSettings {
 #[serde(rename_all = "camelCase")]
 pub struct ChangeSettingsResponse {
     /// The fields of the changeSettings response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// | Name    | Type  |  Description   |
@@ -348,7 +350,8 @@ impl CreateUser {
 #[serde(rename_all = "camelCase")]
 pub struct CreateUserResponse {
     /// The fields of the createUser response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// **Unsupported!**
@@ -379,7 +382,8 @@ impl<TS: ToString> From<&TS> for EmailPassword {
 #[serde(rename_all = "camelCase")]
 pub struct EmailPasswordResponse {
     /// The fields of the emailPassword response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// **Unsupported!**
@@ -1007,7 +1011,8 @@ impl Default for SetQuickMix {
 #[serde(rename_all = "camelCase")]
 pub struct SetQuickMixResponse {
     /// The fields of the setQuickMix response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// A song can be banned from all stations temporarily (one month).
@@ -1042,7 +1047,8 @@ impl<TS: ToString> From<&TS> for SleepSong {
 #[serde(rename_all = "camelCase")]
 pub struct SleepSongResponse {
     /// The fields of the sleepSong response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Starts a complimentary pandora one trial. It is unknown what constitutes a
@@ -1071,7 +1077,8 @@ impl<TS: ToString> From<&TS> for StartComplimentaryTrial {
 #[serde(rename_all = "camelCase")]
 pub struct StartComplimentaryTrialResponse {
     /// The fields of the startComplimentaryTrial response are unknown.
-    pub unknown: Option<serde_json::value::Value>,
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// This method can be used before authenticating a user with User login, but
