@@ -226,33 +226,42 @@ pub struct CreateStation {
     /// The unique id (token) for the track around which the station should
     /// be created.
     pub track_token: String,
+    /// Whether the artist or the song referred to by the trackToken should be
+    /// used to create the station.
+    pub music_type: MusicType,
     /// The unique id (token) for the artist/composer/song/genre to be added to
     /// the station.  Artist tokens start with 'R', composers with 'C', songs
     /// with 'S', and genres with 'G'.
     pub music_token: String,
-    /// Whether the artist or the song referred to by the musicToken should be
-    /// used to create the station.
-    pub music_type: MusicType,
 }
 
 impl CreateStation {
-    /// Create a new CreateStation with some values.
-    pub fn new(track_token: &str, music_token: &str, music_type: MusicType) -> Self {
+    /// Create a new station from a track, usually from a playlist.
+    pub fn new_from_track(track_token: &str, music_type: MusicType) -> Self {
         Self {
             track_token: track_token.to_string(),
+            music_type: music_type,
+            music_token: String::new(),
+        }
+    }
+
+    /// Create a new station from a musicToken, usually returned by a search.
+    pub fn new_from_music_token(music_token: &str) -> Self {
+        Self {
+            track_token: String::new(),
+            music_type: MusicType::Artist,
             music_token: music_token.to_string(),
-            music_type,
         }
     }
 
     /// Create a new CreateStation for a song with some values.
-    pub fn new_song(track_token: &str, music_token: &str) -> Self {
-        Self::new(track_token, music_token, MusicType::Song)
+    pub fn new_from_track_song(track_token: &str) -> Self {
+        Self::new_from_track(track_token, MusicType::Song)
     }
 
     /// Create a new CreateStation for an artist with some values.
-    pub fn new_artist(track_token: &str, music_token: &str) -> Self {
-        Self::new(track_token, music_token, MusicType::Artist)
+    pub fn new_from_track_artist(track_token: &str) -> Self {
+        Self::new_from_track(track_token, MusicType::Artist)
     }
 }
 
@@ -271,27 +280,35 @@ pub enum MusicType {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateStationResponse {
+    /// The unique id (token) for the just-created station.
+    pub station_token: String,
     /// The fields of the createStation response are unknown.
     #[serde(flatten)]
     pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_song<T: ToSessionTokens>(
+pub fn create_station_from_track_song<T: ToSessionTokens>(
     session: &PandoraSession<T>,
     track_token: &str,
-    music_token: &str,
 ) -> Result<CreateStationResponse, Error> {
-    CreateStation::new_song(track_token, music_token).response(session)
+    CreateStation::new_from_track_song(track_token).response(session)
 }
 
 /// Convenience function to do a basic createStation call.
 pub fn create_station_from_artist<T: ToSessionTokens>(
     session: &PandoraSession<T>,
     track_token: &str,
+) -> Result<CreateStationResponse, Error> {
+    CreateStation::new_from_track_artist(track_token).response(session)
+}
+
+/// Convenience function to do a basic createStation call.
+pub fn create_station_from_music_token<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
     music_token: &str,
 ) -> Result<CreateStationResponse, Error> {
-    CreateStation::new_artist(track_token, music_token).response(session)
+    CreateStation::new_from_music_token(music_token).response(session)
 }
 
 /// Feedback added by Rate track can be removed from the station.
@@ -1440,11 +1457,71 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::json::{tests::session_login, user::get_bookmarks, user::get_station_list, Partner};
+    use crate::json::{
+        music::search, music::ArtistMatch, tests::session_login, user::get_station_list, Partner,
+    };
 
-    // TODO: get_genre_stations, get_genre_stations_checksum
-    // TODO: create_station, get_station, rename_station, add_music, delete_music, delete_station
     // TODO: share_station, transform_shared_station,
+    #[test]
+    fn station_ops_test() {
+        // TODO: ensure that the station we intend to create didn't get leaked
+        // by a previous, failed test execution, look for stations named either
+        // "INXS Radio" or "XSNI Radio"
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        let artist_search =
+            search(&session, "INXS").expect("Failed completing artist search request");
+
+        let additional_artist_search =
+            search(&session, "Panic! At the Disco").expect("Failed completing artist search request");
+
+        if let Some(ArtistMatch { music_token, .. }) = artist_search
+            .artists
+            .iter()
+            .filter(|am| am.score == 100)
+            .next()
+        {
+            let created_station = create_station_from_music_token(&session, &music_token)
+                .expect("Failed creating station from search result");
+
+            let renamed_station =
+                rename_station(&session, &created_station.station_token, "XSNI Radio")
+                    .expect("Failed renaming station");
+
+            if let Some(ArtistMatch { music_token, .. }) = additional_artist_search
+                .artists
+                .iter()
+                .filter(|am| am.score == 100)
+                .next()
+            {
+                let added_music = add_music(&session, &created_station.station_token, music_token)
+                    .expect("Failed adding music to station");
+
+                let _del_music = delete_music(&session, &added_music.seed_id)
+                    .expect("Failed deleting music from station");
+            }
+
+            let _del_station = delete_station(&session, &created_station.station_token)
+                .expect("Failed deleting station");
+        }
+    }
+
+    /* This test is very demanding on the server, so we disable it until we want
+     * to retest.
+    #[test]
+    fn genre_stations_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        let genre_stations = get_genre_stations(&session)
+            .expect("Failed getting genre stations");
+
+        let genre_stations_checksum = get_genre_stations_checksum(&session)
+            .expect("Failed getting genre stations checksum");
+    }
+    */
+
     #[test]
     fn station_feedback_test() {
         let partner = Partner::default();
