@@ -1094,13 +1094,13 @@ pub struct GetStationResponse {
     /// Unknown
     pub requires_clean_ads: Option<bool>,
     /// Station music seeds.
-    pub music: StationSeeds,
+    pub music: Option<StationSeeds>,
     /// Whether the station is visible for sharing.
     pub is_shared: Option<bool>,
     /// Whether the station can be deleted.
     pub allow_delete: Option<bool>,
     /// The genre(s) the station belongs to.
-    pub genre: Vec<String>,
+    pub genre: Option<Vec<String>>,
     /// Whether this is a QuickMix station.
     pub is_quick_mix: Option<bool>,
     /// Whether the station may be renamed.
@@ -1110,7 +1110,7 @@ pub struct GetStationResponse {
     /// Whether the description for this station may be edited.
     pub allow_edit_description: Option<bool>,
     /// Feedback submitted for tracks on this station.
-    pub feedback: StationFeedback,
+    pub feedback: Option<StationFeedback>,
 }
 
 /// ``` json
@@ -1436,6 +1436,8 @@ pub fn transform_shared_station<T: ToSessionTokens>(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     use crate::json::{tests::session_login, user::get_bookmarks, user::get_station_list, Partner};
 
@@ -1447,24 +1449,65 @@ mod tests {
         let partner = Partner::default();
         let session = session_login(&partner).expect("Failed initializing login session");
 
-        if let Some(station) = get_station_list(&session)
+        for station in get_station_list(&session)
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
-            .first()
         {
-            if let Some(track) = get_playlist(&session, &station.station_token)
+            // Look through feedback on the station and build up a list of
+            // already-rated songs so that we don't mess with any pre-existing
+            // ratings during this test.  This also exercises get_station.
+            let mut get_station = GetStation::from(&station.station_token);
+            get_station.include_extended_attributes = Some(true);
+
+            let station = get_station
+                .response(&session)
+                .expect("Failed getting station attributes");
+
+            let mut protected_tracks: HashSet<String> = HashSet::new();
+            protected_tracks.extend(
+                station
+                    .feedback
+                    .iter()
+                    .flat_map(|f| f.thumbs_up.iter())
+                    .map(|tf| tf.song_name.clone()),
+            );
+            protected_tracks.extend(
+                station
+                    .feedback
+                    .iter()
+                    .flat_map(|f| f.thumbs_down.iter())
+                    .map(|tf| tf.song_name.clone()),
+            );
+
+            for track in get_playlist(&session, &station.station_token)
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_track())
-                .next()
             {
-                todo!("add_feedback, delete_feedback");
-            } else {
-                panic!("Playlist request returned no feedback-capable results.");
+                if protected_tracks.contains(&track.song_name) {
+                    continue;
+                }
+
+                // Thumbs-up track
+                let feedback =
+                    add_feedback(&session, &station.station_token, &track.track_token, true)
+                        .expect("Failed adding positive feedback to track");
+                // And delete
+                let del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                    .expect("Failed deleting positive feedback from track");
+                // Thumbs-down track
+                let feedback =
+                    add_feedback(&session, &station.station_token, &track.track_token, false)
+                        .expect("Failed adding negative feedback to track");
+                // And delete
+                let del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                    .expect("Failed deleting negative feedback from track");
+
+                // Finished test, stop looping through
+                return;
             }
-        } else {
-            panic!("Station list request returned no results, so no feedback-capable content.");
         }
+        panic!("Station list request returned no results, so no feedback-capable content.");
     }
 }
