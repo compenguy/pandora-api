@@ -871,7 +871,8 @@ pub struct Station {
     /// Url for additional information about station.
     pub station_detail_url: String,
     /// Ids for stations included in this quickmix.
-    pub quick_mix_station_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub quick_mix_station_ids: Vec<String>,
     /// Is this station a quickmix.
     pub is_quick_mix: bool,
     /// Unknown.

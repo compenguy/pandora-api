@@ -111,7 +111,8 @@ pub struct SearchResponse {
     /// Artists matching the search.
     pub artists: Vec<ArtistMatch>,
     /// Genre stations matching the search.
-    pub genre_stations: Option<Vec<GenreMatch>>,
+    #[serde(default)]
+    pub genre_stations: Vec<GenreMatch>,
 }
 
 /// Structure collecting the artist information returned

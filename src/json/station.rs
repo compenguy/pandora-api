@@ -1100,7 +1100,8 @@ pub struct GetStationResponse {
     /// Whether the station can be deleted.
     pub allow_delete: Option<bool>,
     /// The genre(s) the station belongs to.
-    pub genre: Option<Vec<String>>,
+    #[serde(default)]
+    pub genre: Vec<String>,
     /// Whether this is a QuickMix station.
     pub is_quick_mix: Option<bool>,
     /// Whether the station may be renamed.
@@ -1494,14 +1495,14 @@ mod tests {
                     add_feedback(&session, &station.station_token, &track.track_token, true)
                         .expect("Failed adding positive feedback to track");
                 // And delete
-                let del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&session, &feedback.feedback_id)
                     .expect("Failed deleting positive feedback from track");
                 // Thumbs-down track
                 let feedback =
                     add_feedback(&session, &station.station_token, &track.track_token, false)
                         .expect("Failed adding negative feedback to track");
                 // And delete
-                let del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&session, &feedback.feedback_id)
                     .expect("Failed deleting negative feedback from track");
 
                 // Finished test, stop looping through
