@@ -108,11 +108,31 @@ pub struct SearchResponse {
     pub near_matches_available: bool,
     /// Unknown
     pub explanation: String,
+    /// Songs matching the search.
+    #[serde(default)]
+    pub songs: Vec<SongMatch>,
     /// Artists matching the search.
+    #[serde(default)]
     pub artists: Vec<ArtistMatch>,
     /// Genre stations matching the search.
     #[serde(default)]
     pub genre_stations: Vec<GenreMatch>,
+}
+
+/// Structure collecting the song information returned
+/// by searches.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SongMatch {
+    /// Name of the matched song.
+    pub song_name: String,
+    /// The name of the artist found in the search.
+    pub artist_name: String,
+    /// The unique id (token) for the song. Artist tokens start with 'R',
+    /// composers with 'C', songs with 'S', and genres with 'G'.
+    pub music_token: String,
+    /// A rating of how close the match is.
+    pub score: u8,
 }
 
 /// Structure collecting the artist information returned
