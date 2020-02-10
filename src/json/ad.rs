@@ -95,21 +95,16 @@ impl<TS: ToString> From<&TS> for GetAdMetadata {
 #[serde(rename_all = "camelCase")]
 pub struct GetAdMetadataResponse {
     /// Unknown field.
-    pub click_through_url: String,
-    /// Unknown field.
-    pub image_url: String,
-    /// Unknown field.
-    pub audio_url_map: HashMap<String, AudioStream>,
-    /// Unknown field.
     pub ad_tracking_tokens: Vec<String>,
     /// Unknown field.
+    #[serde(default)]
+    pub audio_url_map: HashMap<String, AudioStream>,
+    /// Unknown field.
+    #[serde(default)]
     pub banner_ad_map: HashMap<String, String>,
-    /// Unknown field.
-    pub company_name: String,
-    /// Unknown field.
-    pub track_gain: String,
-    /// Unknown field.
-    pub title: String,
+    /// Additional, optional fields in the response
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// A description of an audio stream.  Where to get it, and how to decode it.
@@ -192,13 +187,45 @@ pub fn register_ad<T: ToSessionTokens>(
 
 #[cfg(test)]
 mod tests {
-    use crate::json::{tests::session_login, Partner};
+    use crate::json::{
+        station::get_playlist, tests::session_login, user::get_station_list, Partner,
+    };
+
+    use super::*;
 
     #[test]
     fn ad_test() {
         let partner = Partner::default();
         let session = session_login(&partner).expect("Failed initializing login session");
 
-        todo!("Write an actual ad test.");
+        for station in get_station_list(&session)
+            .expect("Failed getting station list to look up a track to bookmark")
+            .stations
+        {
+            for ad in get_playlist(&session, &station.station_token)
+                .expect("Failed completing request for playlist")
+                .items
+                .iter()
+                .flat_map(|p| p.get_ad())
+            {
+                let mut get_ad_metadata = GetAdMetadata::from(&ad.ad_token);
+                get_ad_metadata.return_ad_tracking_tokens = Some(true);
+                get_ad_metadata.support_audio_ads = Some(true);
+                get_ad_metadata.include_banner_ad = Some(true);
+
+                let ad_metadata = get_ad_metadata
+                    .response(&session)
+                    .expect("Failed getting ad metadata");
+
+                if !ad_metadata.ad_tracking_tokens.is_empty() {
+                    let _ad_registered = register_ad(
+                        &session,
+                        &station.station_id,
+                        ad_metadata.ad_tracking_tokens,
+                    )
+                    .expect("Failed registering ad");
+                }
+            }
+        }
     }
 }
