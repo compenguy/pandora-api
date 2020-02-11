@@ -752,6 +752,37 @@ impl AudioFormat {
             Self::Wma32 => 32,
         }
     }
+
+    /// Estimator of relative audio quality. The actual numbers don't
+    /// mean anything, it's just for assigning an ordering.
+    fn get_quality_weight(&self) -> u8 {
+        match self {
+            Self::AacPlusAdts64 => 10,
+            Self::AacPlus64 => 9,
+            // MP3 at 128kbps using a high quality encoder is estimated
+            // to be equivalent to AAC-HE at 64kbps.  Because we don't
+            // know the quality of the mp3 encoder, we weigh it below 64kbps
+            // AacPlus, but above 64kbps Aac.
+            // https://en.wikipedia.org/wiki/High-Efficiency_Advanced_Audio_Coding
+            Self::Mp3128 => 8,
+            Self::Aac64 => 7,
+            Self::AacPlusAdts32 => 6,
+            Self::AacPlus32 => 5,
+            Self::AacPlusAdts24 => 4,
+            // Aac is a good codec, but AacPlus holds up much better at low
+            // bitrates, plus this is monoaural.
+            Self::AacMono40 => 2,
+            // 32kbps is an incredibly low bitrate, on an old codec
+            // so this is theorized to be the lowest quality
+            Self::Wma32 => 1,
+        }
+    }
+}
+
+impl PartialOrd for AudioFormat {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.get_quality_weight().cmp(&other.get_quality_weight()))
+    }
 }
 
 impl ToString for AudioFormat {
