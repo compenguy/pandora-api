@@ -2,6 +2,7 @@
 Music support methods.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
+use std::collections::HashMap;
 
 use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
@@ -14,10 +15,74 @@ use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
 /// [music.getSearchRecommendations()](https://6xq.net/pandora-apidoc/json/methods/)
 pub struct GetSearchRecommendationsUnsupported {}
 
-/// **Unsupported!**
-/// Undocumented method
-/// [music.getTrack()](https://6xq.net/pandora-apidoc/json/methods/)
-pub struct GetTrackUnsupported {}
+/// This method returns a description of the track associated with the provided
+/// musicId included with each track in a playlist.
+/// | musicId | String | as returned from a playlist that has not yet expired |
+/// 
+/// [music.getTrack()](https://github.com/pithos/pithos/issues/351)
+#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[pandora_request(encrypted = true)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTrack {
+    /// The token for the track as returned by the playlist
+    pub music_id: String,
+}
+
+impl<TS: ToString> From<&TS> for GetTrack {
+    fn from(music_id: &TS) -> Self {
+        Self {
+            music_id: music_id.to_string(),
+        }
+    }
+}
+
+/// Get extended information for a track as returned by a playlist.
+///
+/// See https://github.com/pithos/pithos/issues/351 for additional 
+/// information
+/// [music.getTrack()](
+///
+/// | Name | Type | Description |
+/// | artistName | String | |
+/// | albumName | String | |
+/// | songName | String | |
+/// | trackToken | String | |
+/// | musicId | String | |
+/// | musicToken | String | |
+/// | artistName | String | |
+/// ``` json
+/// {
+///     "stat": "ok",
+///     "result": {
+///         'albumName': 'Lukas Graham',
+///         'trackToken': 'S5264080',
+///         'artistName': 'Lukas Graham',
+///         'albumArtUrl':
+///             'http://mediaserver-cont-dc6-2-v4v6.pandora.com/images/public/gracenote/albumart/9/6/6/9/800079669_500W_500H.jpg',
+///         'score': '',
+///         'songName': '7 Years',
+///         'musicId': 'S5264080',
+///         'songDetailUrl':
+///             'http://www.pandora.com/lukas-graham/lukas-graham/7-years',
+///         'musicToken': '2b0dc86c994aa1e9425ba2910f7abf8b'
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTrackResponse {
+    /// The fields of the getTrack response are unknown.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+/// Convenience function to do a basic addSongBookmark call.
+pub fn get_track<T: ToSessionTokens>(
+    session: &PandoraSession<T>,
+    music_id: &str,
+) -> Result<GetTrackResponse, Error> {
+    GetTrack::from(&music_id).response(session)
+}
 
 /// **Unsupported!**
 /// Undocumented method
@@ -173,7 +238,7 @@ pub struct ShareMusicUnsupported {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json::{tests::session_login, Partner};
+    use crate::json::{tests::session_login, user::get_station_list, station::get_playlist, Partner};
 
     #[test]
     fn search_test() {
@@ -186,5 +251,27 @@ mod tests {
         let _search_response: SearchResponse = search
             .response(&session)
             .expect("Failed completing search request");
+    }
+
+    #[test]
+    fn get_track_test() {
+        let partner = Partner::default();
+        let session = session_login(&partner).expect("Failed initializing login session");
+
+        for station in get_station_list(&session)
+            .expect("Failed getting station list to look up a track to bookmark")
+            .stations
+        {
+            for track in get_playlist(&session, &station.station_token)
+                .expect("Failed completing request for playlist")
+                .items
+                .iter()
+                .flat_map(|p| p.get_track())
+            {
+                if let Some(serde_json::value::Value::String(music_id)) = track.optional.get("musicId") {
+                    let _response = get_track(&session, music_id).expect("Failed getting track information");
+                }
+            }
+        }
     }
 }
