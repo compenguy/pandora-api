@@ -31,7 +31,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
 
 /// Valid values for the gender is user account settings. The documentation
 /// suggests that the only valid values are "Male", "Female".
@@ -139,9 +139,7 @@ pub struct CanSubscribeResponse {
 }
 
 /// Convenience function to do a basic canSubscribe call.
-pub fn can_subscribe<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-) -> Result<CanSubscribeResponse, Error> {
+pub fn can_subscribe(session: &PandoraSession) -> Result<CanSubscribeResponse, Error> {
     CanSubscribe::new().response(session)
 }
 
@@ -261,8 +259,8 @@ pub struct ChangeSettingsResponse {
 /// Convenience function to do a basic canSubscribe call. This function
 /// is basically useless for actually changing settings, but is useful
 /// to return the current values for user account settings.
-pub fn change_settings<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn change_settings(
+    session: &PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<ChangeSettingsResponse, Error> {
@@ -374,8 +372,8 @@ pub struct CreateUserResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn create_user<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn create_user(
+    session: &PandoraSession,
     username: &str,
     password: &str,
     gender: UserGender,
@@ -427,8 +425,8 @@ pub struct EmailPasswordResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn email_password<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn email_password(
+    session: &PandoraSession,
     username: &str,
 ) -> Result<EmailPasswordResponse, Error> {
     EmailPassword::from(&username).response(session)
@@ -602,9 +600,7 @@ pub struct SongBookmark {
 }
 
 /// Convenience function to do a basic getBookmarks call.
-pub fn get_bookmarks<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-) -> Result<GetBookmarksResponse, Error> {
+pub fn get_bookmarks(session: &PandoraSession) -> Result<GetBookmarksResponse, Error> {
     GetBookmarks::new().response(session)
 }
 
@@ -655,9 +651,7 @@ pub struct GetSettingsResponse {
 }
 
 /// Convenience function to do a basic getSettings call.
-pub fn get_settings<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-) -> Result<GetSettingsResponse, Error> {
+pub fn get_settings(session: &PandoraSession) -> Result<GetSettingsResponse, Error> {
     GetSettings::new().response(session)
 }
 
@@ -894,9 +888,7 @@ pub struct Station {
 }
 
 /// Convenience function to do a basic getStationList call.
-pub fn get_station_list<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-) -> Result<GetStationListResponse, Error> {
+pub fn get_station_list(session: &PandoraSession) -> Result<GetStationListResponse, Error> {
     GetStationList::new().response(session)
 }
 
@@ -966,9 +958,7 @@ pub struct GetUsageInfoResponse {
 }
 
 /// Convenience function to get account usage info.
-pub fn get_usage_info<S: ToSessionTokens>(
-    session: &PandoraSession<S>,
-) -> Result<GetUsageInfoResponse, Error> {
+pub fn get_usage_info(session: &PandoraSession) -> Result<GetUsageInfoResponse, Error> {
     GetUsageInfo {}.response(session)
 }
 
@@ -1153,8 +1143,8 @@ pub struct ValidateUsernameResponse {
 }
 
 /// Convenience function to verify that a username is either valid or unique.
-pub fn validate_username<S: ToSessionTokens>(
-    session: &PandoraSession<S>,
+pub fn validate_username(
+    session: &PandoraSession,
     username: &str,
 ) -> Result<ValidateUsernameResponse, Error> {
     ValidateUsername {
@@ -1206,11 +1196,9 @@ mod tests {
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
-            .login(&session)
+            .login(&mut session)
             .expect("Failed completing partner login");
-        session
-            .tokens_mut()
-            .map(|s| s.update_from_partner_login_response(&partner_login));
+        session.update_partner_tokens(&partner_login);
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();

@@ -11,12 +11,9 @@ fn basic_session_test() {
     assert!(licensing.is_allowed);
 
     // Do partner authentication
-    let partner_login = partner
-        .login(&session)
+    let _partner_login = partner
+        .login(&mut session)
         .expect("Failed during partner auth API request");
-    session
-        .tokens_mut()
-        .map(|s| s.update_from_partner_login_response(&partner_login));
 
     let test_username_raw = include_str!("../test_username.txt");
     let test_username = test_username_raw.trim();
@@ -39,11 +36,8 @@ fn basic_session_test() {
     assert_eq!(user_invalidation.is_unique, Some(true));
 
     // Test login
-    let login_response = auth::user_login(&session, &test_username, &test_password)
+    let _login_response = auth::user_login(&mut session, &test_username, &test_password)
         .expect("Failed while logging user in");
-    session
-        .tokens_mut()
-        .map(|s| s.update_from_user_login_response(&login_response));
 
     // Get user usage info
     let _usage_info =

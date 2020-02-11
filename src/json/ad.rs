@@ -14,7 +14,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession};
 
 /// Retrieve the metadata for the associated advertisement token (usually provided by one of the other methods responsible for retrieving the playlist).
 ///
@@ -122,8 +122,8 @@ pub struct AudioStream {
 }
 
 /// Convenience function to do a basic getAdMetadata call.
-pub fn get_ad_metadata<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn get_ad_metadata(
+    session: &PandoraSession,
     ad_token: &str,
 ) -> Result<GetAdMetadataResponse, Error> {
     GetAdMetadata::from(&ad_token).response(session)
@@ -175,8 +175,8 @@ pub struct RegisterAdResponse {
 }
 
 /// Convenience function to do a basic registerAd call.
-pub fn register_ad<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn register_ad(
+    session: &PandoraSession,
     station_id: &str,
     ad_tracking_tokens: Vec<String>,
 ) -> Result<RegisterAdResponse, Error> {

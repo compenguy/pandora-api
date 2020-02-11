@@ -7,7 +7,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession};
 
 /// Get (incomplete) list of attributes assigned to song by Music Genome Project.
 ///
@@ -73,8 +73,8 @@ pub struct Explanation {
 }
 
 /// Convenience function to do a basic explainTrack call.
-pub fn explain_track<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn explain_track(
+    session: &PandoraSession,
     track_token: &str,
 ) -> Result<ExplainTrackResponse, Error> {
     ExplainTrack::from(&track_token).response(session)

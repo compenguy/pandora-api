@@ -9,7 +9,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession, ToPartnerTokens, ToUserTokens};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -82,6 +82,18 @@ impl PartnerLogin {
             return_update_prompt_versions: None,
         }
     }
+
+    /// This is a wrapper around the `response` method from the
+    /// PandoraApiRequest trait that automatically merges the partner tokens
+    /// from the response back into the session.
+    pub fn merge_response(
+        &self,
+        session: &mut PandoraSession,
+    ) -> Result<PartnerLoginResponse, Error> {
+        let response = self.response(session)?;
+        session.update_partner_tokens(&response);
+        Ok(response)
+    }
 }
 
 /// syncTime is used to calculate the server time, see synctime. partnerId and authToken are required to proceed with user authentication.
@@ -133,14 +145,28 @@ pub struct PartnerLoginResponse {
     pub urls: Option<HashMap<String, String>>,
 }
 
+impl ToPartnerTokens for PartnerLoginResponse {
+    fn to_partner_id(&self) -> Option<String> {
+        Some(self.partner_id.clone())
+    }
+
+    fn to_partner_token(&self) -> Option<String> {
+        Some(self.partner_auth_token.clone())
+    }
+
+    fn to_sync_time(&self) -> Option<String> {
+        Some(self.sync_time.clone())
+    }
+}
+
 /// Convenience function to do a basic partnerLogin call.
-pub fn partner_login<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn partner_login(
+    session: &mut PandoraSession,
     username: &str,
     password: &str,
     device_model: &str,
 ) -> Result<PartnerLoginResponse, Error> {
-    PartnerLogin::new(username, password, device_model, None).response(session)
+    PartnerLogin::new(username, password, device_model, None).merge_response(session)
 }
 
 /// This request *must* be sent over a TLS-encrypted link. It authenticates the Pandora user by sending his username, usually his email address, and password as well as the partnerAuthToken obtained by Partner login.
@@ -324,6 +350,15 @@ impl UserLogin {
             include_advertiser_attributes: None,
         }
     }
+
+    /// This is a wrapper around the `response` method from the
+    /// PandoraApiRequest trait that automatically merges the user tokens from
+    /// the response back into the session.
+    pub fn merge_response(&self, session: &mut PandoraSession) -> Result<UserLoginResponse, Error> {
+        let response = self.response(session)?;
+        session.update_user_tokens(&response);
+        Ok(response)
+    }
 }
 
 /// The returned userAuthToken is used to authenticate access to other API methods.
@@ -388,13 +423,23 @@ pub struct UserLoginResponse {
     pub minimum_ad_refresh_interval: u32,
 }
 
+impl ToUserTokens for UserLoginResponse {
+    fn to_user_id(&self) -> Option<String> {
+        Some(self.user_id.clone())
+    }
+
+    fn to_user_token(&self) -> Option<String> {
+        Some(self.user_auth_token.clone())
+    }
+}
+
 /// Convenience function to perform a basic user login.
-pub fn user_login<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn user_login(
+    session: &mut PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<UserLoginResponse, Error> {
-    UserLogin::new(username, password).response(session)
+    UserLogin::new(username, password).merge_response(session)
 }
 
 #[cfg(test)]

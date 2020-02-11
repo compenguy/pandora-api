@@ -8,7 +8,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -18,7 +18,7 @@ pub struct GetSearchRecommendationsUnsupported {}
 /// This method returns a description of the track associated with the provided
 /// musicId included with each track in a playlist.
 /// | musicId | String | as returned from a playlist that has not yet expired |
-/// 
+///
 /// [music.getTrack()](https://github.com/pithos/pithos/issues/351)
 #[derive(Debug, Clone, Serialize, PandoraRequest)]
 #[pandora_request(encrypted = true)]
@@ -38,7 +38,7 @@ impl<TS: ToString> From<&TS> for GetTrack {
 
 /// Get extended information for a track as returned by a playlist.
 ///
-/// See https://github.com/pithos/pithos/issues/351 for additional 
+/// See https://github.com/pithos/pithos/issues/351 for additional
 /// information
 /// [music.getTrack()](
 ///
@@ -77,10 +77,7 @@ pub struct GetTrackResponse {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn get_track<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-    music_id: &str,
-) -> Result<GetTrackResponse, Error> {
+pub fn get_track(session: &PandoraSession, music_id: &str) -> Result<GetTrackResponse, Error> {
     GetTrack::from(&music_id).response(session)
 }
 
@@ -127,10 +124,7 @@ impl<TS: ToString> From<&TS> for Search {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn search<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-    search_text: &str,
-) -> Result<SearchResponse, Error> {
+pub fn search(session: &PandoraSession, search_text: &str) -> Result<SearchResponse, Error> {
     Search::from(&search_text).response(session)
 }
 
@@ -238,7 +232,9 @@ pub struct ShareMusicUnsupported {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json::{tests::session_login, user::get_station_list, station::get_playlist, Partner};
+    use crate::json::{
+        station::get_playlist, tests::session_login, user::get_station_list, Partner,
+    };
 
     #[test]
     fn search_test() {
@@ -268,8 +264,11 @@ mod tests {
                 .iter()
                 .flat_map(|p| p.get_track())
             {
-                if let Some(serde_json::value::Value::String(music_id)) = track.optional.get("musicId") {
-                    let _response = get_track(&session, music_id).expect("Failed getting track information");
+                if let Some(serde_json::value::Value::String(music_id)) =
+                    track.optional.get("musicId")
+                {
+                    let _response =
+                        get_track(&session, music_id).expect("Failed getting track information");
                 }
             }
         }

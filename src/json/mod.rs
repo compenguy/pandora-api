@@ -27,43 +27,31 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 
 use crate::errors::Error;
-use crate::json::auth::{PartnerLogin, PartnerLoginResponse, UserLoginResponse};
+use crate::json::auth::{PartnerLogin, PartnerLoginResponse};
 use crate::json::errors::JsonError;
 
 /// A builder to construct the properties of an http request to Pandora.
 #[derive(Debug, Clone)]
-pub struct PandoraSession<T: ToSessionTokens> {
+pub struct PandoraSession {
     client: reqwest::blocking::Client,
     endpoint_url: url::Url,
-    tokens: Option<T>,
+    tokens: SessionTokens,
     json: serde_json::value::Value,
     args: std::collections::BTreeMap<String, String>,
     encrypted: bool,
 }
 
-impl<T: ToSessionTokens> PandoraSession<T> {
+impl PandoraSession {
     /// Construct a new PandoraSession.
-    pub fn new<E: ToEndpoint>(client: Option<reqwest::blocking::Client>, to_endpoint: E) -> Self {
-        Self {
-            client: client.unwrap_or_else(reqwest::blocking::Client::new),
-            endpoint_url: to_endpoint.to_endpoint_url(),
-            tokens: None,
-            json: serde_json::value::Value::Object(serde_json::map::Map::new()),
-            args: std::collections::BTreeMap::new(),
-            encrypted: false,
-        }
-    }
-
-    /// Construct a new PandoraSession using the specified session instance.
-    pub fn with_session_tokens<E: ToEndpoint>(
+    pub fn new<T: ToEncryptionTokens, E: ToEndpoint>(
         client: Option<reqwest::blocking::Client>,
-        to_endpoint: E,
-        tokens: T,
+        to_encryption_tokens: &T,
+        to_endpoint: &E,
     ) -> Self {
         Self {
             client: client.unwrap_or_else(reqwest::blocking::Client::new),
             endpoint_url: to_endpoint.to_endpoint_url(),
-            tokens: Some(tokens),
+            tokens: SessionTokens::new(to_encryption_tokens),
             json: serde_json::value::Value::Object(serde_json::map::Map::new()),
             args: std::collections::BTreeMap::new(),
             encrypted: false,
@@ -99,15 +87,14 @@ impl<T: ToSessionTokens> PandoraSession<T> {
         &mut self.endpoint_url
     }
 
-    /// Set the session object on this PandoraSession instance.
-    pub fn tokens(&mut self, tokens: T) -> &mut Self {
-        self.tokens = Some(tokens);
-        self
+    /// Update the session partner tokens from type implementing ToPartnerTokens.
+    pub fn update_partner_tokens<T: ToPartnerTokens>(&mut self, to_partner_tokens: &T) {
+        self.tokens.update_partner_tokens(to_partner_tokens);
     }
 
-    /// Get a mutable reference to the session to update or make calls on it.
-    pub fn tokens_mut(&mut self) -> Option<&mut T> {
-        self.tokens.as_mut()
+    /// Update the session partner tokens from type implementing ToPartnerTokens.
+    pub fn update_user_tokens<T: ToUserTokens>(&mut self, to_user_tokens: &T) {
+        self.tokens.update_user_tokens(to_user_tokens);
     }
 
     /// Set the json object on this PandoraSession instance.
@@ -139,20 +126,20 @@ impl<T: ToSessionTokens> PandoraSession<T> {
 
     /// Merge necessary values from the session instance into the query arguments
     fn add_session_tokens_to_args(&mut self) {
-        if let Some(session) = self.tokens.clone() {
-            // auth_token arg should be set to user_token, if available, otherwise partner_token
-            if let Some(auth_token) = session
-                .to_user_token()
-                .or_else(|| session.to_partner_token())
-            {
-                self.arg("auth_token", &auth_token);
-            }
-            if let Some(partner_id) = &session.to_partner_id() {
-                self.arg("partner_id", &partner_id);
-            }
-            if let Some(user_id) = &session.to_user_id() {
-                self.arg("user_id", &user_id);
-            }
+        // auth_token arg should be set to user_token, if available, otherwise partner_token
+        if let Some(auth_token) = self
+            .tokens
+            .user_token
+            .clone()
+            .or_else(|| self.tokens.partner_token.clone())
+        {
+            self.arg("auth_token", &auth_token);
+        }
+        if let Some(partner_id) = self.tokens.partner_id.clone() {
+            self.arg("partner_id", &partner_id);
+        }
+        if let Some(user_id) = self.tokens.user_id.clone() {
+            self.arg("user_id", &user_id);
         }
     }
 
@@ -162,22 +149,21 @@ impl<T: ToSessionTokens> PandoraSession<T> {
             .json
             .as_object_mut()
             .expect("Programming Error accessing API request json for modification.");
-        if let Some(session) = &self.tokens {
-            if let Some(partner_auth_token) = session.to_partner_token() {
-                json_obj.insert(
-                    "partnerAuthToken".to_string(),
-                    serde_json::Value::String(partner_auth_token),
-                );
-            }
-            if let Some(user_auth_token) = session.to_user_token() {
-                json_obj.insert(
-                    "userAuthToken".to_string(),
-                    serde_json::Value::String(user_auth_token),
-                );
-            }
-            if let Some(sync_time) = session.to_sync_time() {
-                json_obj.insert("syncTime".to_string(), serde_json::Value::from(sync_time));
-            }
+        if let Some(partner_auth_token) = self.tokens.partner_token.clone() {
+            json_obj.insert(
+                "partnerAuthToken".to_string(),
+                serde_json::Value::String(partner_auth_token),
+            );
+        }
+        if let Some(user_auth_token) = self.tokens.user_token.clone() {
+            json_obj.insert(
+                "userAuthToken".to_string(),
+                serde_json::Value::String(user_auth_token),
+            );
+        }
+
+        if let Some(sync_time) = self.tokens.sync_time {
+            json_obj.insert("syncTime".to_string(), serde_json::Value::from(sync_time));
         }
     }
 
@@ -194,12 +180,10 @@ impl<T: ToSessionTokens> PandoraSession<T> {
         //    println!("Request body: {:?}", body);
         //}
         if self.encrypted {
-            if let Some(tokens) = &self.tokens {
-                body = tokens.encrypt(&body);
-                //if cfg!(test) {
-                //    println!("Encrypted body: {:?}", body);
-                //}
-            }
+            body = self.tokens.encrypt(&body);
+            //if cfg!(test) {
+            //    println!("Encrypted body: {:?}", body);
+            //}
         }
 
         self.client.post(url).body(body)
@@ -285,9 +269,9 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
 
     /// Generate an HTTP request that, when send() is called on it, will submit
     /// the built request.
-    fn request<T: ToSessionTokens>(
+    fn request(
         &self,
-        session: &PandoraSession<T>,
+        session: &PandoraSession,
     ) -> std::result::Result<reqwest::blocking::RequestBuilder, Self::Error> {
         let mut tmp_session = session.clone();
         tmp_session
@@ -301,9 +285,9 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
 
     /// Build the request, submit it, and extract the response content from the
     /// body json, and deserialize it into the Self::Response type.
-    fn response<T: ToSessionTokens>(
+    fn response(
         &self,
-        session: &PandoraSession<T>,
+        session: &PandoraSession,
     ) -> std::result::Result<Self::Response, Self::Error> {
         let response = self.request(session)?.send().map_err(Self::Error::from)?;
         response.error_for_status_ref().map_err(Self::Error::from)?;
@@ -312,7 +296,9 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
             // Debugging support - output full response text before attempting
             // deserialization
             let response_body = response.text()?;
-            println!("Full response: {:?}", response_body);
+            if cfg!(test) {
+                //println!("Full response: {:?}", response_body);
+            }
             serde_json::from_slice(response_body.as_bytes())?
         } else {
             // Regular builds just grab the json directly.
@@ -320,7 +306,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         };
 
         if cfg!(test) {
-            println!("Json response: {:?}", response_obj);
+            //println!("Json response: {:?}", response_obj);
         }
 
         let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
@@ -346,9 +332,9 @@ impl ToEndpoint for String {
     }
 }
 
-/// This trait is used to provide access to all the tokens needed to track
-/// the active session.
-pub trait ToSessionTokens: Clone {
+/// This trait is used to provide access to the tokens needed to initiate
+/// a partnerLogin.
+pub trait ToEncryptionTokens {
     /// Returns the encryption key to be used for this session.
     fn to_encrypt_key(&self) -> String;
     /// Encrypt the provided data using the session encryption key.
@@ -361,6 +347,11 @@ pub trait ToSessionTokens: Clone {
     fn decrypt(&self, hex_data: &str) -> Vec<u8> {
         crypt::decrypt(&self.to_decrypt_key(), hex_data)
     }
+}
+
+/// This trait is used to provide access to all the tokens needed to track
+/// the partner (application) session.
+pub trait ToPartnerTokens {
     /// Return the partner id for the session, if one has been already been set.
     ///
     /// Returns None otherwise.
@@ -370,18 +361,25 @@ pub trait ToSessionTokens: Clone {
     ///
     /// Returns None otherwise.
     fn to_partner_token(&self) -> Option<String>;
+
+    /// Return the session sync time as a u64, if one has been already been set.
+    ///
+    /// Returns None otherwise.
+    fn to_sync_time(&self) -> Option<String>;
+}
+
+/// This trait is used to provide access to all the tokens needed to track
+/// the user session.
+pub trait ToUserTokens {
     /// Return the user id for the session, if one has been already been set.
     ///
     /// Returns None otherwise.
     fn to_user_id(&self) -> Option<String>;
+
     /// Return the user token for the session, if one has been already been set.
     ///
     /// Returns None otherwise.
     fn to_user_token(&self) -> Option<String>;
-    /// Return the session sync time as a u64, if one has been already been set.
-    ///
-    /// Returns None otherwise.
-    fn to_sync_time(&self) -> Option<u64>;
 }
 
 /// Trait for providing access to a station token.
@@ -537,8 +535,8 @@ impl Partner {
 
     /// Initialize a PandoraSession using the corresponding Partner
     /// tokens and endpoint.
-    pub fn init_session(&self) -> PandoraSession<SessionTokens> {
-        PandoraSession::with_session_tokens(None, self.to_endpoint(), self.to_session_tokens())
+    pub fn init_session(&self) -> PandoraSession {
+        PandoraSession::new(None, self, self)
     }
 
     /// Generate a PartnerLogin instance from this object that can be
@@ -557,26 +555,10 @@ impl Partner {
 
     /// Convenience method for submitting the partner login request for this
     /// partner.
-    pub fn login<T: ToSessionTokens>(
-        &self,
-        session: &PandoraSession<T>,
-    ) -> Result<PartnerLoginResponse, Error> {
-        self.to_partner_login().response(session)
-    }
-
-    /// Generate a SessionTokens instance from this object that can be
-    /// used for tracking the state of the login session with the service.
-    pub fn to_session_tokens(&self) -> SessionTokens {
-        SessionTokens {
-            encrypt_key: self.encrypt_password.clone(),
-            decrypt_key: self.decrypt_password.clone(),
-            partner_id: None,
-            partner_token: None,
-            sync_time: None,
-            local_time_base: None,
-            user_id: None,
-            user_token: None,
-        }
+    pub fn login(&self, session: &mut PandoraSession) -> Result<PartnerLoginResponse, Error> {
+        let response = self.to_partner_login().response(session)?;
+        session.update_partner_tokens(&response);
+        Ok(response)
     }
 }
 
@@ -584,6 +566,16 @@ impl Default for Partner {
     /// Create a default Partner instance using the android device type.
     fn default() -> Self {
         Self::new_android()
+    }
+}
+
+impl ToEncryptionTokens for Partner {
+    fn to_encrypt_key(&self) -> String {
+        self.encrypt_password.clone()
+    }
+
+    fn to_decrypt_key(&self) -> String {
+        self.decrypt_password.clone()
     }
 }
 
@@ -609,7 +601,10 @@ pub struct SessionTokens {
     pub(crate) partner_token: Option<String>,
     /// The sync time token returned by the partner login request.  This is
     /// private so that it will be updated/read by accessor methods that
-    /// correctly adjust for the time offset that needs to be added on
+    /// correctly adjust for the time offset that needs to be added on.
+    ///
+    /// Also note that this is the decrypted form, not the encrypted bytes
+    /// passed around on types that implement ToPartnerTokens.
     sync_time: Option<u64>,
     /// The instant when the sync_time was set, so that when we return sync_time,
     /// we return the value offset by however much time has passed since we were
@@ -624,10 +619,10 @@ pub struct SessionTokens {
 impl SessionTokens {
     /// Initialize a SessionTokens object with only the encryption keys,
     /// as those are needed even before authentication begins
-    pub fn new(encrypt_key: &str, decrypt_key: &str) -> Self {
+    pub fn new<T: ToEncryptionTokens>(to_encryption_tokens: &T) -> Self {
         Self {
-            encrypt_key: encrypt_key.to_string(),
-            decrypt_key: decrypt_key.to_string(),
+            encrypt_key: to_encryption_tokens.to_encrypt_key(),
+            decrypt_key: to_encryption_tokens.to_decrypt_key(),
             partner_id: None,
             partner_token: None,
             sync_time: None,
@@ -639,30 +634,25 @@ impl SessionTokens {
 
     /// Update the current SessionTokens instance using values from the
     /// response to the PartnerLogin request.
-    pub fn update_from_partner_login_response(
-        &mut self,
-        partner_login_response: &PartnerLoginResponse,
-    ) {
-        self.partner_id = Some(partner_login_response.partner_id.clone());
-        self.partner_token = Some(partner_login_response.partner_auth_token.clone());
+    pub fn update_partner_tokens<T: ToPartnerTokens>(&mut self, to_partner_tokens: &T) {
+        self.partner_id = to_partner_tokens.to_partner_id();
+        self.partner_token = to_partner_tokens.to_partner_token();
         // The first four bytes are, reportedly, garbage, but I suspect it's
         // actually supposed to function as a salt that was intended to make it
         // difficult to recover the decryption keys.
-        let sync_time_bytes: Vec<u8> = self
-            .decrypt(&partner_login_response.sync_time)
-            .iter()
-            .skip(4)
-            .cloned()
-            .collect();
-        let sync_time_str = std::str::from_utf8(&sync_time_bytes).unwrap_or("0");
-        self.set_sync_time(sync_time_str.parse::<u64>().unwrap_or(0));
+        if let Some(sync_time) = to_partner_tokens.to_sync_time() {
+            let sync_time_bytes: Vec<u8> =
+                self.decrypt(&sync_time).iter().skip(4).cloned().collect();
+            let sync_time_str = std::str::from_utf8(&sync_time_bytes).unwrap_or("0");
+            self.set_sync_time(sync_time_str.parse::<u64>().unwrap_or(0));
+        }
     }
 
     /// Update the current SessionTokens instance using values from the
     /// response to the UserLogin request.
-    pub fn update_from_user_login_response(&mut self, user_login_response: &UserLoginResponse) {
-        self.user_id = Some(user_login_response.user_id.clone());
-        self.user_token = Some(user_login_response.user_auth_token.clone());
+    pub fn update_user_tokens<T: ToUserTokens>(&mut self, to_user_tokens: &T) {
+        self.user_id = to_user_tokens.to_user_id();
+        self.user_token = to_user_tokens.to_user_token();
     }
 
     /// The current server time as of the last request.  Submitted requests must
@@ -686,7 +676,7 @@ impl SessionTokens {
     }
 }
 
-impl ToSessionTokens for SessionTokens {
+impl ToEncryptionTokens for SessionTokens {
     /// Retrieve the encryption key for this session
     fn to_encrypt_key(&self) -> String {
         self.encrypt_key.clone()
@@ -695,25 +685,11 @@ impl ToSessionTokens for SessionTokens {
     fn to_decrypt_key(&self) -> String {
         self.decrypt_key.clone()
     }
-    /// Retrieve the partner id for this session
-    fn to_partner_id(&self) -> Option<String> {
-        self.partner_id.clone()
-    }
-    /// Retrieve the partner auth token for this session
-    fn to_partner_token(&self) -> Option<String> {
-        self.partner_token.clone()
-    }
-    /// Retrieve the user id for this session
-    fn to_user_id(&self) -> Option<String> {
-        self.user_id.clone()
-    }
-    /// Retrieve the user auth token for this session
-    fn to_user_token(&self) -> Option<String> {
-        self.user_token.clone()
-    }
-    /// Retrieve the sync time for this session
-    fn to_sync_time(&self) -> Option<u64> {
-        self.sync_time
+}
+
+impl<T: ToEncryptionTokens> From<&T> for SessionTokens {
+    fn from(tokens: &T) -> Self {
+        Self::new(tokens)
     }
 }
 
@@ -760,22 +736,22 @@ mod tests {
     use crate::errors::Error;
     use crate::json::auth::user_login;
 
-    pub fn session_login(partner: &Partner) -> Result<PandoraSession<SessionTokens>, Error> {
+    // TODO: lazy_static create a single session and return a RcRefCell to
+    // it instead.  I suspect that some of the transient
+    // InsufficientConnectivity errors are resulting from simultaneously
+    // creating a large number of sessions, creating race conditions or
+    // invalidating tokens.
+    pub fn session_login(partner: &Partner) -> Result<PandoraSession, Error> {
         let mut session = partner.init_session();
-        let partner_login = partner.login(&session)?;
-        session
-            .tokens_mut()
-            .map(|s| s.update_from_partner_login_response(&partner_login));
+        let _partner_login = partner.login(&mut session)?;
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();
         let test_password_raw = include_str!("../../test_password.txt");
         let test_password = test_password_raw.trim();
 
-        let user_login = user_login(&session, &test_username, &test_password)?;
-        session
-            .tokens_mut()
-            .map(|s| s.update_from_user_login_response(&user_login));
+        let user_login = user_login(&mut session, &test_username, &test_password)?;
+        session.update_user_tokens(&user_login);
         Ok(session)
     }
 
@@ -784,10 +760,8 @@ mod tests {
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
-            .login(&session)
+            .login(&mut session)
             .expect("Failed while performing partner login");
-        session
-            .tokens_mut()
-            .map(|s| s.update_from_partner_login_response(&partner_login));
+        session.update_partner_tokens(&partner_login);
     }
 }

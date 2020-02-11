@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
 use crate::json::errors::JsonError;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
 
 /// Songs can be “loved” or “banned”. Both influence the music played on the
 /// station. Banned songs are never played again on this particular station.
@@ -131,8 +131,8 @@ pub struct AddFeedbackResponse {
 }
 
 /// Convenience function to do a basic addFeedback call.
-pub fn add_feedback<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn add_feedback(
+    session: &PandoraSession,
     station_token: &str,
     track_token: &str,
     is_positive: bool,
@@ -204,8 +204,8 @@ pub struct AddMusicResponse {
 }
 
 /// Convenience function to do a basic addMusic call.
-pub fn add_music<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn add_music(
+    session: &PandoraSession,
     station_token: &str,
     music_token: &str,
 ) -> Result<AddMusicResponse, Error> {
@@ -241,7 +241,7 @@ impl CreateStation {
     pub fn new_from_track(track_token: &str, music_type: MusicType) -> Self {
         Self {
             track_token: track_token.to_string(),
-            music_type: music_type,
+            music_type,
             music_token: String::new(),
         }
     }
@@ -289,24 +289,24 @@ pub struct CreateStationResponse {
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_track_song<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn create_station_from_track_song(
+    session: &PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_track_song(track_token).response(session)
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_artist<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn create_station_from_artist(
+    session: &PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_track_artist(track_token).response(session)
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_music_token<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn create_station_from_music_token(
+    session: &PandoraSession,
     music_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_music_token(music_token).response(session)
@@ -349,8 +349,8 @@ pub struct DeleteFeedbackResponse {
 }
 
 /// Convenience function to do a basic deleteFeedback call.
-pub fn delete_feedback<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn delete_feedback(
+    session: &PandoraSession,
     feedback_id: &str,
 ) -> Result<DeleteFeedbackResponse, Error> {
     DeleteFeedback::from(&feedback_id).response(session)
@@ -394,10 +394,7 @@ pub struct DeleteMusicResponse {
 }
 
 /// Convenience function to do a basic deleteMusic call.
-pub fn delete_music<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-    seed_id: &str,
-) -> Result<DeleteMusicResponse, Error> {
+pub fn delete_music(session: &PandoraSession, seed_id: &str) -> Result<DeleteMusicResponse, Error> {
     DeleteMusic::from(&seed_id).response(session)
 }
 
@@ -436,8 +433,8 @@ pub struct DeleteStationResponse {
 }
 
 /// Convenience function to do a basic deleteStation call.
-pub fn delete_station<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn delete_station(
+    session: &PandoraSession,
     station_token: &str,
 ) -> Result<DeleteStationResponse, Error> {
     DeleteStation::from(&station_token).response(session)
@@ -483,8 +480,8 @@ pub struct GetGenreStationsChecksumResponse {
 }
 
 /// Convenience function to do a basic getGenreStationsChecksum call.
-pub fn get_genre_stations_checksum<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn get_genre_stations_checksum(
+    session: &PandoraSession,
 ) -> Result<GetGenreStationsChecksumResponse, Error> {
     GetGenreStationsChecksum::default().response(session)
 }
@@ -565,9 +562,7 @@ pub struct GenreStation {
 }
 
 /// Convenience function to do a basic getGenreStations call.
-pub fn get_genre_stations<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
-) -> Result<GetGenreStationsResponse, Error> {
+pub fn get_genre_stations(session: &PandoraSession) -> Result<GetGenreStationsResponse, Error> {
     GetGenreStations::default().response(session)
 }
 
@@ -719,7 +714,11 @@ impl AudioFormat {
             ("aac", "64") => Ok(Self::AacPlus64),
             ("aacplus", "32") => Ok(Self::AacPlus32),
             ("aacplus", "64") => Ok(Self::AacPlus64),
-            _ => Err(JsonError::new(None, Some(String::from("Unsupported audioUrlMap format")))).map_err(Error::from),
+            _ => Err(JsonError::new(
+                None,
+                Some(String::from("Unsupported audioUrlMap format")),
+            ))
+            .map_err(Error::from),
         }
     }
 
@@ -985,8 +984,8 @@ pub struct AudioStream {
 }
 
 /// Convenience function to do a basic getPlaylist call.
-pub fn get_playlist<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn get_playlist(
+    session: &PandoraSession,
     station_token: &str,
 ) -> Result<GetPlaylistResponse, Error> {
     GetPlaylist::from(&station_token).response(session)
@@ -1344,8 +1343,8 @@ pub struct TrackFeedback {
 }
 
 /// Convenience function to do a basic getStation call.
-pub fn get_station<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn get_station(
+    session: &PandoraSession,
     station_token: &str,
 ) -> Result<GetStationResponse, Error> {
     GetStation::from(&station_token).response(session)
@@ -1390,8 +1389,8 @@ pub struct RenameStationResponse {
 }
 
 /// Convenience function to do a basic renameStation call.
-pub fn rename_station<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn rename_station(
+    session: &PandoraSession,
     station_token: &str,
     station_name: &str,
 ) -> Result<RenameStationResponse, Error> {
@@ -1445,8 +1444,8 @@ pub struct ShareStationResponse {
 }
 
 /// Convenience function to do a basic shareStation call.
-pub fn share_station<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn share_station(
+    session: &PandoraSession,
     station_id: &str,
     station_token: &str,
     emails: Vec<String>,
@@ -1490,8 +1489,8 @@ pub struct TransformSharedStationResponse {
 }
 
 /// Convenience function to do a basic transformSharedStation call.
-pub fn transform_shared_station<T: ToSessionTokens>(
-    session: &PandoraSession<T>,
+pub fn transform_shared_station(
+    session: &PandoraSession,
     station_token: &str,
 ) -> Result<TransformSharedStationResponse, Error> {
     TransformSharedStation::from(&station_token).response(session)
@@ -1518,8 +1517,8 @@ mod tests {
         let artist_search =
             search(&session, "INXS").expect("Failed completing artist search request");
 
-        let additional_artist_search =
-            search(&session, "Panic! At the Disco").expect("Failed completing artist search request");
+        let additional_artist_search = search(&session, "Panic! At the Disco")
+            .expect("Failed completing artist search request");
 
         if let Some(ArtistMatch { music_token, .. }) = artist_search
             .artists

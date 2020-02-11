@@ -7,7 +7,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToSessionTokens};
+use crate::json::{PandoraApiRequest, PandoraSession};
 
 /// Check whether Pandora is available in the connecting client’s country,
 /// based on geoip database.  This is not strictly required since Partner
@@ -40,9 +40,7 @@ pub struct CheckLicensingResponse {
 }
 
 /// Convenience function to check geographic licensing restrictions.
-pub fn check_licensing<S: ToSessionTokens>(
-    session: &PandoraSession<S>,
-) -> Result<CheckLicensingResponse, Error> {
+pub fn check_licensing(session: &PandoraSession) -> Result<CheckLicensingResponse, Error> {
     CheckLicensing::default().response(session)
 }
 
