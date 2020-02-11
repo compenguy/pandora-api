@@ -603,14 +603,14 @@ impl ToEndpoint for Partner {
 #[derive(Debug, Clone)]
 pub struct SessionTokens {
     /// The key used to encrypt the body of certain API requests.
-    pub(crate) encrypt_key: String,
+    pub encrypt_key: String,
     /// The key used to decrypt certain values from the body of certain API
     /// responses.
-    pub(crate) decrypt_key: String,
+    pub decrypt_key: String,
     /// The partner id token returned by the partner login request
-    pub(crate) partner_id: Option<String>,
+    pub partner_id: Option<String>,
     /// The partner auth token returned by the partner login request
-    pub(crate) partner_token: Option<String>,
+    pub partner_token: Option<String>,
     /// The sync time token returned by the partner login request.  This is
     /// private so that it will be updated/read by accessor methods that
     /// correctly adjust for the time offset that needs to be added on.
@@ -623,9 +623,9 @@ pub struct SessionTokens {
     /// issued the token.
     local_time_base: Option<std::time::Instant>,
     /// The user id token returned by the user login request
-    pub(crate) user_id: Option<String>,
+    pub user_id: Option<String>,
     /// The user auth token returned by the user login request
-    pub(crate) user_token: Option<String>,
+    pub user_token: Option<String>,
 }
 
 impl SessionTokens {
