@@ -889,7 +889,7 @@ pub struct PlaylistTrack {
     /// The default audio streams available for this track.
     pub audio_url_map: AudioQuality,
     /// Additional audio stream formats requested for this track.
-    /// NOTE: This field is documented as able to be a String
+    /// TODO: This field is documented as able to be a String
     /// or a Vec<String>.
     pub additional_audio_url: String,
     /// A floating point value, encoded as a string, representing the track gain
@@ -1485,7 +1485,7 @@ mod tests {
             let created_station = create_station_from_music_token(&session, &music_token)
                 .expect("Failed creating station from search result");
 
-            let renamed_station =
+            let _renamed_station =
                 rename_station(&session, &created_station.station_token, "XSNI Radio")
                     .expect("Failed renaming station");
 
