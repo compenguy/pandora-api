@@ -97,6 +97,18 @@ impl PandoraSession {
         self.tokens.update_user_tokens(to_user_tokens);
     }
 
+    /// Get a reference to the session tokens to check the state or make calls
+    /// on it.
+    pub fn session_tokens(&self) -> &SessionTokens {
+        &self.tokens
+    }
+
+    /// Get a mutable reference to the session tokens to modify the state or
+    /// make calls on it.
+    pub fn session_tokens_mut(&mut self) -> &mut SessionTokens {
+        &mut self.tokens
+    }
+
     /// Set the json object on this PandoraSession instance.
     ///
     /// When build() is called, the json object will be updated with
