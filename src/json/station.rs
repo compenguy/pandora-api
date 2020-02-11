@@ -684,7 +684,7 @@ impl<TS: ToString> From<&TS> for GetPlaylist {
 /// * HTTP_64_AACPLUS_ADTS
 /// * HTTP_128_MP3
 /// * HTTP_32_WMA
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AudioFormat {
     /// AAC format, monaural audio, 40kbps
     AacMono40,
