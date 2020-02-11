@@ -12,6 +12,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
+use crate::json::errors::JsonError;
 use crate::json::{PandoraApiRequest, PandoraSession, Timestamp, ToSessionTokens};
 
 /// Songs can be “loved” or “banned”. Both influence the music played on the
@@ -708,6 +709,50 @@ pub enum AudioFormat {
     Mp3128,
     /// WMA format, 32kbps
     Wma32,
+}
+
+impl AudioFormat {
+    /// Determine the audio format from the encoding and bitrate information
+    /// returned as part of a playlist track.
+    pub fn new_from_audio_url_map(encoding: &str, bitrate: &str) -> Result<Self, Error> {
+        match (encoding, bitrate) {
+            ("aac", "64") => Ok(Self::AacPlus64),
+            ("aacplus", "32") => Ok(Self::AacPlus32),
+            ("aacplus", "64") => Ok(Self::AacPlus64),
+            _ => Err(JsonError::new(None, Some(String::from("Unsupported audioUrlMap format")))).map_err(Error::from),
+        }
+    }
+
+    /// Determine the associated file extension for this format.
+    pub fn get_extension(&self) -> String {
+        match self {
+            // TODO: verify container format for all aac types
+            Self::AacMono40 => String::from("m4a"),
+            Self::Aac64 => String::from("m4a"),
+            Self::AacPlus32 => String::from("m4a"),
+            Self::AacPlus64 => String::from("m4a"),
+            Self::AacPlusAdts24 => String::from("aac"),
+            Self::AacPlusAdts32 => String::from("aac"),
+            Self::AacPlusAdts64 => String::from("aac"),
+            Self::Mp3128 => String::from("mp3"),
+            Self::Wma32 => String::from("wma"),
+        }
+    }
+
+    /// Determine the encoded audio bitrate for this format.
+    pub fn get_bitrate(&self) -> u32 {
+        match self {
+            Self::AacMono40 => 40,
+            Self::Aac64 => 64,
+            Self::AacPlus32 => 32,
+            Self::AacPlus64 => 64,
+            Self::AacPlusAdts24 => 24,
+            Self::AacPlusAdts32 => 32,
+            Self::AacPlusAdts64 => 64,
+            Self::Mp3128 => 128,
+            Self::Wma32 => 32,
+        }
+    }
 }
 
 impl ToString for AudioFormat {
