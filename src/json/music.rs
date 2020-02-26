@@ -49,7 +49,6 @@ impl<TS: ToString> From<&TS> for GetTrack {
 /// | trackToken | String | |
 /// | musicId | String | |
 /// | musicToken | String | |
-/// | artistName | String | |
 /// ``` json
 /// {
 ///     "stat": "ok",
@@ -71,14 +70,27 @@ impl<TS: ToString> From<&TS> for GetTrack {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetTrackResponse {
-    /// The fields of the getTrack response are unknown.
+    /// The name of the song for the provided token.
+    pub song_name: String,
+    /// The name of the artist for the provided token.
+    pub artist_name: String,
+    /// The name of the album for the provided token.
+    pub album_name: String,
+    /// The track token that is unique to the playlist is was provided with.
+    pub track_token: String,
+    /// The unique id (token) for the song. Artist tokens start with 'R',
+    /// composers with 'C', songs with 'S', and genres with 'G'.
+    pub music_id: String,
+    /// A unique token for a song/track.
+    pub music_token: String,
+    /// Additional optional or undocumented fields of a GetTrack response.
     #[serde(flatten)]
     pub optional: HashMap<String, serde_json::value::Value>,
 }
 
-/// Convenience function to do a basic addSongBookmark call.
-pub fn get_track(session: &PandoraSession, music_id: &str) -> Result<GetTrackResponse, Error> {
-    GetTrack::from(&music_id).response(session)
+/// Convenience function to do a basic getTrack call.
+pub fn get_track(session: &PandoraSession, track_token: &str) -> Result<GetTrackResponse, Error> {
+    GetTrack::from(&track_token).response(session)
 }
 
 /// **Unsupported!**
