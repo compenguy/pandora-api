@@ -20,6 +20,7 @@ pub mod test;
 pub mod track;
 pub mod user;
 
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use reqwest;
@@ -559,9 +560,7 @@ impl Partner {
             password: self.password.clone(),
             device_model: self.device_model.clone(),
             version: self.version.clone(),
-            include_urls: None,
-            return_device_type: None,
-            return_update_prompt_versions: None,
+            optional: HashMap::new(),
         }
     }
 

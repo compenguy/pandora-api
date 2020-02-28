@@ -30,24 +30,40 @@ use crate::json::{PandoraApiRequest, PandoraSession};
 pub struct GetAdMetadata {
     /// The ad token associated with the ad for which metadata is being requested.
     pub ad_token: String,
-    /// Whether to include ad tracking tokens in the response.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_ad_tracking_tokens: Option<bool>,
-    /// Whether audio ads are supported.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub support_audio_ads: Option<bool>,
-    /// Whether banner ads should be included in the response.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_banner_ad: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+impl GetAdMetadata {
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request should include ad tracking tokens in the response. (Chaining call)
+    pub fn return_ad_tracking_tokens(self, value: bool) -> Self {
+        self.and_boolean_option("returnAdTrackingTokens", value)
+    }
+
+    /// Inform pandora whether audio ads are supported. (Chaining call)
+    pub fn support_audio_ads(self, value: bool) -> Self {
+        self.and_boolean_option("supportAudioAds", value)
+    }
+
+    /// Whether request should include banner ads in the response. (Chaining call)
+    pub fn include_banner_ad(self, value: bool) -> Self {
+        self.and_boolean_option("includeBannerAd", value)
+    }
 }
 
 impl<TS: ToString> From<&TS> for GetAdMetadata {
     fn from(ad_token: &TS) -> Self {
         Self {
             ad_token: ad_token.to_string(),
-            return_ad_tracking_tokens: None,
-            support_audio_ads: None,
-            include_banner_ad: None,
+            optional: HashMap::new(),
         }
     }
 }
@@ -150,9 +166,10 @@ pub struct RegisterAd {
 }
 
 impl RegisterAd {
-    /// Add a tracking token to the list of ad tracking tokens for this request.
-    pub fn add_tracking_token(&mut self, token: &str) {
-        self.ad_tracking_tokens.push(token.to_string())
+    /// Add a tracking token to the list of ad tracking tokens for this request. (Chaining call)
+    pub fn and_tracking_token(mut self, token: &str) -> Self {
+        self.ad_tracking_tokens.push(token.to_string());
+        self
     }
 }
 
@@ -208,12 +225,10 @@ mod tests {
                 .iter()
                 .flat_map(|p| p.get_ad())
             {
-                let mut get_ad_metadata = GetAdMetadata::from(&ad.ad_token);
-                get_ad_metadata.return_ad_tracking_tokens = Some(true);
-                get_ad_metadata.support_audio_ads = Some(true);
-                get_ad_metadata.include_banner_ad = Some(true);
-
-                let ad_metadata = get_ad_metadata
+                let ad_metadata = GetAdMetadata::from(&ad.ad_token)
+                    .return_ad_tracking_tokens(true)
+                    .support_audio_ads(true)
+                    .include_banner_ad(true)
                     .response(&session)
                     .expect("Failed getting ad metadata");
 

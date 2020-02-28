@@ -117,20 +117,35 @@ pub struct PublishSongShareUnsupported {}
 pub struct Search {
     /// The text to search for in artist names or track titles.
     pub search_text: String,
-    /// Whether to include partial matches in the results
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_near_matches: Option<bool>,
-    /// Whether to include genre stations in the results
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_genre_stations: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+impl Search {
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request should include partial matches in the response. (Chaining call)
+    pub fn include_near_matches(self, value: bool) -> Self {
+        self.and_boolean_option("includeNearMatches", value)
+    }
+
+    /// Whether request should include genre stations in the response. (Chaining call)
+    pub fn include_genre_stations(self, value: bool) -> Self {
+        self.and_boolean_option("includeGenreStations", value)
+    }
 }
 
 impl<TS: ToString> From<&TS> for Search {
     fn from(search_text: &TS) -> Self {
         Self {
             search_text: search_text.to_string(),
-            include_near_matches: None,
-            include_genre_stations: None,
+            optional: HashMap::new(),
         }
     }
 }
@@ -175,10 +190,6 @@ pub fn search(session: &PandoraSession, search_text: &str) -> Result<SearchRespo
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResponse {
-    /// Whether any matches were found.
-    pub near_matches_available: bool,
-    /// Unknown
-    pub explanation: String,
     /// Songs matching the search.
     #[serde(default)]
     pub songs: Vec<SongMatch>,
@@ -188,6 +199,9 @@ pub struct SearchResponse {
     /// Genre stations matching the search.
     #[serde(default)]
     pub genre_stations: Vec<GenreMatch>,
+    /// Additional optional fields that may appear in the response.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Structure collecting the song information returned
@@ -254,9 +268,8 @@ mod tests {
         let session = session_login(&partner).expect("Failed initializing login session");
 
         let _search_response = search(&session, "INXS").expect("Failed completing search request");
-        let mut search = Search::from(&"Alternative");
-        search.include_genre_stations = Some(true);
-        let _search_response: SearchResponse = search
+        let _search_response: SearchResponse = Search::from(&"Alternative")
+            .include_genre_stations(true)
             .response(&session)
             .expect("Failed completing search request");
     }

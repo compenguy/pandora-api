@@ -52,15 +52,9 @@ pub struct PartnerLogin {
     pub device_model: String,
     /// The Pandora JSON API version
     pub version: String,
-    /// Unknown field
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_urls: Option<bool>,
-    /// Unknown field
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_device_type: Option<bool>,
-    /// Unknown field
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_update_prompt_versions: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl PartnerLogin {
@@ -77,10 +71,45 @@ impl PartnerLogin {
             password: password.to_string(),
             device_model: device_model.to_string(),
             version: version.unwrap_or_else(|| String::from("5")),
-            include_urls: None,
-            return_device_type: None,
-            return_update_prompt_versions: None,
+            optional: HashMap::new(),
         }
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Request to include urls in the response. (Chaining call)
+    pub fn include_urls(self) -> Self {
+        self.and_boolean_option("includeUrls", true)
+    }
+
+    /// Request to not include urls in the response. (Chaining call)
+    pub fn no_include_urls(self) -> Self {
+        self.and_boolean_option("includeUrls", false)
+    }
+
+    /// Request to include the device type in the response. (Chaining call)
+    pub fn return_device_type(self) -> Self {
+        self.and_boolean_option("returnDeviceType", true)
+    }
+
+    /// Request to not include the device type in the response. (Chaining call)
+    pub fn no_return_device_type(self) -> Self {
+        self.and_boolean_option("returnDeviceType", false)
+    }
+
+    /// Request to return a prompt to update versions in the response. (Chaining call)
+    pub fn return_update_prompt_versions(self) -> Self {
+        self.and_boolean_option("returnUpdatePromptVersions", true)
+    }
+
+    /// Request to not return a prompt to update versions in the response. (Chaining call)
+    pub fn no_return_update_prompt_versions(self) -> Self {
+        self.and_boolean_option("returnUpdatePromptVersions", false)
     }
 
     /// This is a wrapper around the `response` method from the
@@ -230,87 +259,9 @@ pub struct UserLogin {
     pub username: String,
     /// The account password to login with.
     pub password: String,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_genre_stations: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_capped: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_pandora_one_info: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_demographics: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_ad_attributes: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_station_list: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_station_art_url: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_station_seeds: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_shuffle_instead_of_quick_mix: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub station_art_size: Option<String>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_collect_track_lifetime_stats: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_is_subscriber: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xplatform_ad_capable: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub complimentary_sponsor_supported: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_subscription_expiration: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_has_used_trial: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_userstate: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_account_message: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_user_webname: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_listening_hours: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_facebook: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_twitter: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_daily_skip_limit: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_skip_delay: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_googleplay: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_show_user_recommendations: Option<bool>,
-    /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_advertiser_attributes: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl UserLogin {
@@ -321,34 +272,158 @@ impl UserLogin {
             login_type: "user".to_string(),
             username: username.to_string(),
             password: password.to_string(),
-            return_genre_stations: None,
-            return_capped: None,
-            include_pandora_one_info: None,
-            include_demographics: None,
-            include_ad_attributes: None,
-            return_station_list: None,
-            include_station_art_url: None,
-            include_station_seeds: None,
-            include_shuffle_instead_of_quick_mix: None,
-            station_art_size: None,
-            return_collect_track_lifetime_stats: None,
-            return_is_subscriber: None,
-            xplatform_ad_capable: None,
-            complimentary_sponsor_supported: None,
-            include_subscription_expiration: None,
-            return_has_used_trial: None,
-            return_userstate: None,
-            include_account_message: None,
-            include_user_webname: None,
-            include_listening_hours: None,
-            include_facebook: None,
-            include_twitter: None,
-            include_daily_skip_limit: None,
-            include_skip_delay: None,
-            include_googleplay: None,
-            include_show_user_recommendations: None,
-            include_advertiser_attributes: None,
+            optional: HashMap::new(),
         }
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Convenience function for setting string flags in the request. (Chaining call)
+    pub fn and_string_option(mut self, option: &str, value: &str) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request should return genre stations in the response. (Chaining call)
+    pub fn return_genre_stations(self, value: bool) -> Self {
+        self.and_boolean_option("returnGenreStations", value)
+    }
+
+    /// Whether request should return capped in the response. (Chaining call)
+    pub fn return_capped(self, value: bool) -> Self {
+        self.and_boolean_option("returnCapped", value)
+    }
+
+    /// Whether request should include PandoraOne info in the response. (Chaining call)
+    pub fn include_pandora_one_info(self, value: bool) -> Self {
+        self.and_boolean_option("includePandoraOneInfo", value)
+    }
+
+    /// Whether request should include demographics in the response. (Chaining call)
+    pub fn include_demographics(self, value: bool) -> Self {
+        self.and_boolean_option("includeDemographics", value)
+    }
+
+    /// Whether request should include ad attributes in the response. (Chaining call)
+    pub fn include_ad_attributes(self, value: bool) -> Self {
+        self.and_boolean_option("includeAdAttributes", value)
+    }
+
+    /// Whether request should return station list in the response. (Chaining call)
+    pub fn return_station_list(self, value: bool) -> Self {
+        self.and_boolean_option("returnStationList", value)
+    }
+
+    /// Whether request should include the station art url in the response. (Chaining call)
+    pub fn include_station_art_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeStationArtUrl", value)
+    }
+
+    /// Whether request should include the station seeds in the response. (Chaining call)
+    pub fn include_station_seeds(self, value: bool) -> Self {
+        self.and_boolean_option("includeStationSeeds", value)
+    }
+
+    /// Whether request should include shuffle stations instead of quickmix in the response. (Chaining call)
+    pub fn include_shuffle_instead_of_quick_mix(self, value: bool) -> Self {
+        self.and_boolean_option("includeShuffleInsteadOfQuickMix", value)
+    }
+
+    /// The size of station art to include in the response (if includeStationArlUrl was set). (Chaining call)
+    pub fn station_art_size(self, value: &str) -> Self {
+        self.and_string_option("includeShuffleInsteadOfQuickMix", value)
+    }
+
+    /// Whether request should return collect track lifetime stats in the response. (Chaining call)
+    pub fn return_collect_track_lifetime_stats(self, value: bool) -> Self {
+        self.and_boolean_option("returnCollectTrackLifetimeStats", value)
+    }
+
+    /// Whether request should return whether the user is a subscriber in the response. (Chaining call)
+    pub fn return_is_subscriber(self, value: bool) -> Self {
+        self.and_boolean_option("returnIsSubscriber", value)
+    }
+
+    /// Whether the requesting client is cross-platform ad capable. (Chaining call)
+    pub fn xplatform_ad_capable(self, value: bool) -> Self {
+        self.and_boolean_option("xplatformAdCapable", value)
+    }
+
+    /// Whether the complimentary sponsors are supported. (Chaining call)
+    pub fn complimentary_sponsor_supported(self, value: bool) -> Self {
+        self.and_boolean_option("complimentarySponsorSupported", value)
+    }
+
+    /// Whether request should include subscription expiration in the response. (Chaining call)
+    pub fn include_subscription_expiration(self, value: bool) -> Self {
+        self.and_boolean_option("includeSubscriptionExpiration", value)
+    }
+
+    /// Whether request should return whether the user has used their trial
+    /// subscription in the response. (Chaining call)
+    pub fn return_has_used_trial(self, value: bool) -> Self {
+        self.and_boolean_option("returnHasUsedTrial", value)
+    }
+
+    /// Whether request should return user state in the response. (Chaining call)
+    pub fn return_userstate(self, value: bool) -> Self {
+        self.and_boolean_option("returnUserstate", value)
+    }
+
+    /// Whether request should return account message in the response. (Chaining call)
+    pub fn include_account_message(self, value: bool) -> Self {
+        self.and_boolean_option("includeAccountMessage", value)
+    }
+
+    /// Whether request should include user webname in the response. (Chaining call)
+    pub fn include_user_webname(self, value: bool) -> Self {
+        self.and_boolean_option("includeUserWebname", value)
+    }
+
+    /// Whether request should include listening hours in the response. (Chaining call)
+    pub fn include_listening_hours(self, value: bool) -> Self {
+        self.and_boolean_option("includeListeningHours", value)
+    }
+
+    /// Whether request should include facebook connections in the response. (Chaining call)
+    pub fn include_facebook(self, value: bool) -> Self {
+        self.and_boolean_option("includeFacebook", value)
+    }
+
+    /// Whether request should include twitter connections in the response. (Chaining call)
+    pub fn include_twitter(self, value: bool) -> Self {
+        self.and_boolean_option("includeTwitter", value)
+    }
+
+    /// Whether request should include daily skip limit in the response. (Chaining call)
+    pub fn include_daily_skip_limit(self, value: bool) -> Self {
+        self.and_boolean_option("includeDailySkipLimit", value)
+    }
+
+    /// Whether request should include the track skip delay in the response. (Chaining call)
+    pub fn include_skip_delay(self, value: bool) -> Self {
+        self.and_boolean_option("includeSkipDelay", value)
+    }
+
+    /// Whether request should include Google Play metadata in the response. (Chaining call)
+    pub fn include_googleplay(self, value: bool) -> Self {
+        self.and_boolean_option("includeGoogleplay", value)
+    }
+
+    /// Whether request should include the user recommendations in the response. (Chaining call)
+    pub fn include_show_user_recommendations(self, value: bool) -> Self {
+        self.and_boolean_option("includeShowUserRecommendations", value)
+    }
+
+    /// Whether request should include advertiser attributes in the response. (Chaining call)
+    pub fn include_advertiser_attributes(self, value: bool) -> Self {
+        self.and_boolean_option("includeAdvertiserAttributes", value)
     }
 
     /// This is a wrapper around the `response` method from the
@@ -409,9 +484,6 @@ pub struct UserLoginResponse {
     /// Unknown field.
     pub can_listen: bool,
     /// Unknown field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub now_playing_ad_url: Option<String>,
-    /// Unknown field.
     pub listening_timeout_minutes: String,
     /// Unknown field.
     pub max_stations_allowed: u32,
@@ -421,6 +493,9 @@ pub struct UserLoginResponse {
     pub user_profile_url: String,
     /// Unknown field.
     pub minimum_ad_refresh_interval: u32,
+    /// Additional optional fields that may appear in the response.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl ToUserTokens for UserLoginResponse {

@@ -611,65 +611,103 @@ pub fn get_genre_stations(session: &PandoraSession) -> Result<GetGenreStationsRe
 pub struct GetPlaylist {
     /// The unique id (token) for the station to request a playlist from
     pub station_token: String,
-    /// Request a non-default audio format as an additional audio url response
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_audio_url: Option<String>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub station_is_starting: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_track_length: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_audio_token: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub xplatform_ad_capable: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_audio_receipt_url: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_backstage_ad_url: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_sharing_ad_url: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_social_ad_url: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_competitive_sep_indicator: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_complete_playlist: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_track_options: Option<bool>,
-    /// Unknown
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub audio_ad_pod_capable: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+impl GetPlaylist {
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Additional (non-default) audio formats that should be included in the
+    /// response. Repeat call to include additional formats. (Chaining call)
+    pub fn additional_audio_url(mut self, value: &str) -> Self {
+        // TODO: Verify this logic works
+        self.optional
+            .entry("additionalAudioUrl".to_string())
+            .and_modify(|s| {
+                if let serde_json::value::Value::String(s) = s {
+                    s.push(',');
+                    s.push_str(value);
+                }
+            })
+            .or_insert(serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request should also mark the station as starting. (Chaining call)
+    pub fn station_is_starting(self, value: bool) -> Self {
+        self.and_boolean_option("stationIsStarting", value)
+    }
+
+    /// Whether playlist entries should include the track length in the response. (Chaining call)
+    pub fn include_track_length(self, value: bool) -> Self {
+        self.and_boolean_option("includeTrackLength", value)
+    }
+
+    /// Whether playlist entries should include the audio token in the response. (Chaining call)
+    pub fn include_audio_token(self, value: bool) -> Self {
+        self.and_boolean_option("includeAudioToken", value)
+    }
+
+    /// Whether the client is cross-platform ad capable. (Chaining call)
+    pub fn xplatform_ad_capable(self, value: bool) -> Self {
+        self.and_boolean_option("xplatformAdCapable", value)
+    }
+
+    /// Whether to include audio receipt url in the response. (Chaining call)
+    pub fn include_audio_receipt_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeAudioReceiptUrl", value)
+    }
+
+    /// Whether to include backstage ad url in the response. (Chaining call)
+    pub fn include_backstage_ad_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeBackstageAdUrl", value)
+    }
+
+    /// Whether to include sharing ad url in the response. (Chaining call)
+    pub fn include_sharing_ad_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeSharingAdUrl", value)
+    }
+
+    /// Whether to include social ad url in the response. (Chaining call)
+    pub fn include_social_ad_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeSocialAdUrl", value)
+    }
+
+    /// Whether to include competitive sep indicator in the response. (Chaining call)
+    pub fn include_competitive_sep_indicator(self, value: bool) -> Self {
+        self.and_boolean_option("includeCompetitiveSepIndicator", value)
+    }
+
+    /// Whether to include complete playlist in the response. (Chaining call)
+    pub fn include_complete_playlist(self, value: bool) -> Self {
+        self.and_boolean_option("includeCompletePlaylist", value)
+    }
+
+    /// Whether to include track options in the response. (Chaining call)
+    pub fn include_track_options(self, value: bool) -> Self {
+        self.and_boolean_option("includeTrackOptions", value)
+    }
+
+    /// Indicate to Pandora whether the client is audio ad pod capable. (Chaining call)
+    pub fn audio_ad_pod_capable(self, value: bool) -> Self {
+        self.and_boolean_option("audioAdPodCapable", value)
+    }
 }
 
 impl<TS: ToString> From<&TS> for GetPlaylist {
     fn from(station_token: &TS) -> Self {
         Self {
             station_token: station_token.to_string(),
-            additional_audio_url: Some(AudioFormat::Mp3128.to_string()),
-            station_is_starting: None,
-            include_track_length: None,
-            include_audio_token: None,
-            xplatform_ad_capable: None,
-            include_audio_receipt_url: None,
-            include_backstage_ad_url: None,
-            include_sharing_ad_url: None,
-            include_social_ad_url: None,
-            include_competitive_sep_indicator: None,
-            include_complete_playlist: None,
-            include_track_options: None,
-            audio_ad_pod_capable: None,
+            optional: HashMap::new(),
         }
+        .additional_audio_url(&AudioFormat::Mp3128.to_string())
     }
 }
 
@@ -1044,16 +1082,30 @@ pub fn get_playlist(
 pub struct GetStation {
     /// The unique id (token) for the station to request information on.
     pub station_token: String,
-    /// Include additional station attributes in the response.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_extended_attributes: Option<bool>,
+    /// The fields of the createStation response are unknown.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+impl GetStation {
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request should include extended station attributes in the response. (Chaining call)
+    pub fn include_extended_attributes(self, value: bool) -> Self {
+        self.and_boolean_option("includeExtendedAttributes", value)
+    }
 }
 
 impl<TS: ToString> From<&TS> for GetStation {
     fn from(station_token: &TS) -> Self {
         GetStation {
             station_token: station_token.to_string(),
-            include_extended_attributes: None,
+            optional: HashMap::new(),
         }
     }
 }
@@ -1615,10 +1667,8 @@ mod tests {
             // Look through feedback on the station and build up a list of
             // already-rated songs so that we don't mess with any pre-existing
             // ratings during this test.  This also exercises get_station.
-            let mut get_station = GetStation::from(&station.station_token);
-            get_station.include_extended_attributes = Some(true);
-
-            let station = get_station
+            let station = GetStation::from(&station.station_token)
+                .include_extended_attributes(true)
                 .response(&session)
                 .expect("Failed getting station attributes");
 

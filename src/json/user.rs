@@ -98,9 +98,9 @@ pub struct AuthorizeFacebookUnsupported {}
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CanSubscribe {
-    /// Name of the in-app purchases vendor.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub iap_vendor: Option<String>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl CanSubscribe {
@@ -109,11 +109,25 @@ impl CanSubscribe {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Convenience function for setting string flags in the request. (Chaining call)
+    pub fn and_string_option(mut self, option: &str, value: &str) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Set the name of the in-app purchases vendor. (Chaining call)
+    pub fn iap_vendor(self, value: &str) -> Self {
+        self.and_string_option("iapVendor", value)
+    }
 }
 
 impl Default for CanSubscribe {
     fn default() -> Self {
-        Self { iap_vendor: None }
+        Self {
+            optional: HashMap::new(),
+        }
     }
 }
 
@@ -157,64 +171,9 @@ pub struct ChangeSettings {
     pub current_username: String,
     /// Current credentials must be provided with the request.
     pub current_password: String,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_initiated_change: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_facebook: Option<bool>,
-    /// Set account-holder gender, Male or Female.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gender: Option<UserGender>,
-    /// Set account-holder birth year.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub birth_year: Option<u32>,
-    /// Set account-holder zip code.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub zip_code: Option<String>,
-    /// Set account as private.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_profile_private: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enable_comments: Option<bool>,
-    /// Allow email communications from Pandora.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email_opt_in: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email_comments: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email_new_followers: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_explicit_content_filter_enabled: Option<bool>,
-    /// Unknown.
-    #[serde(rename = "isExplicitContentFilterPINProtected")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_explicit_content_filter_pin_protected: Option<bool>,
-    /// Change account username.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub new_username: Option<String>,
-    /// Change account password.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub new_password: Option<String>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub facebook_auto_share_enabled: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auto_share_track_play: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auto_share_likes: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auto_share_follows: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub facebook_setting_checksum: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl ChangeSettings {
@@ -224,26 +183,124 @@ impl ChangeSettings {
         Self {
             current_username: current_username.to_string(),
             current_password: current_password.to_string(),
-            user_initiated_change: None,
-            include_facebook: None,
-            gender: None,
-            birth_year: None,
-            zip_code: None,
-            is_profile_private: None,
-            enable_comments: None,
-            email_opt_in: None,
-            email_comments: None,
-            email_new_followers: None,
-            is_explicit_content_filter_enabled: None,
-            is_explicit_content_filter_pin_protected: None,
-            new_username: None,
-            new_password: None,
-            facebook_auto_share_enabled: None,
-            auto_share_track_play: None,
-            auto_share_likes: None,
-            auto_share_follows: None,
-            facebook_setting_checksum: None,
+            optional: HashMap::new(),
         }
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_string_option(mut self, option: &str, value: &str) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_number_option(mut self, option: &str, value: u32) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether request was initiated at the user request. (Chaining call)
+    pub fn user_initiated_change(self, value: bool) -> Self {
+        self.and_boolean_option("userInitiatedChange", value)
+    }
+
+    /// Unknown. (Chaining call)
+    pub fn include_facebook(self, value: bool) -> Self {
+        self.and_boolean_option("includeFacebook", value)
+    }
+
+    /// Set account-holder gender, Male or Female. (Chaining call)
+    pub fn gender(self, value: UserGender) -> Self {
+        self.and_string_option("gender", &value.to_string())
+    }
+
+    /// Set account-holder birth year. (Chaining call)
+    pub fn birth_year(self, value: u32) -> Self {
+        self.and_number_option("birthYear", value)
+    }
+
+    /// Set account-holder zip code. (Chaining call)
+    pub fn zip_code(self, value: &str) -> Self {
+        self.and_string_option("zipCode", value)
+    }
+
+    /// Whether the user profile is private or publicly visible. (Chaining call)
+    pub fn is_profile_private(self, value: bool) -> Self {
+        self.and_boolean_option("isProfilePrivate", value)
+    }
+
+    /// Whether account comments are enabled. (Chaining call)
+    pub fn enable_comments(self, value: bool) -> Self {
+        self.and_boolean_option("enableComments", value)
+    }
+
+    /// Whether email communications from Pandora are permitted. (Chaining call)
+    pub fn email_opt_in(self, value: bool) -> Self {
+        self.and_boolean_option("emailOptIn", value)
+    }
+
+    /// Whether to receive email notifications for comments. (Chaining call)
+    pub fn email_comments(self, value: bool) -> Self {
+        self.and_boolean_option("emailComments", value)
+    }
+
+    /// Whether to receive email notifications of new followers. (Chaining call)
+    pub fn email_new_followers(self, value: bool) -> Self {
+        self.and_boolean_option("emailNewFollowers", value)
+    }
+
+    /// Whether the explicit content filter should be enabled. (Chaining call)
+    pub fn is_explicit_content_filter_enabled(self, value: bool) -> Self {
+        self.and_boolean_option("isExplicitContentFilterEnabled", value)
+    }
+
+    /// Whether the explicit content filter is protected by a PIN code. (Chaining call)
+    pub fn is_explicit_content_filter_pin_protected(self, value: bool) -> Self {
+        self.and_boolean_option("isExplicitContentFilterPINProtected", value)
+    }
+
+    /// New account username. (Chaining call)
+    pub fn new_username(self, value: &str) -> Self {
+        self.and_string_option("newUsername", value)
+    }
+
+    /// New account password. (Chaining call)
+    pub fn new_password(self, value: &str) -> Self {
+        self.and_string_option("newPassword", value)
+    }
+
+    /// Whether to auto-share on facebook. (Chaining call)
+    pub fn facebook_auto_share_enabled(self, value: bool) -> Self {
+        self.and_boolean_option("facebookAutoShareEnabled", value)
+    }
+
+    /// Whether to auto-share tracks played. (Chaining call)
+    pub fn auto_share_track_play(self, value: bool) -> Self {
+        self.and_boolean_option("autoShareTrackPlay", value)
+    }
+
+    /// Whether to auto-share liked tracks. (Chaining call)
+    pub fn auto_share_track_likes(self, value: bool) -> Self {
+        self.and_boolean_option("autoShareTrackLikes", value)
+    }
+
+    /// Whether to auto-share user follows. (Chaining call)
+    pub fn auto_share_follows(self, value: bool) -> Self {
+        self.and_boolean_option("autoShareFollows", value)
+    }
+
+    /// Unknown. (Chaining call)
+    pub fn facebook_setting_checksum(self, value: bool) -> Self {
+        self.and_boolean_option("facebookSettingChecksum", value)
     }
 }
 
@@ -711,27 +768,9 @@ pub struct GetStationListChecksumResponse {
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetStationList {
-    /// Whether to include "artUrl" field in result
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_station_art_url: Option<bool>,
-    /// Format for station art, "W130H130".
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub station_art_size: Option<String>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_ad_attributes: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_station_seeds: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_shuffle_instead_of_quick_mix: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_recommendations: Option<bool>,
-    /// Unknown.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_explanations: Option<bool>,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl GetStationList {
@@ -740,18 +779,61 @@ impl GetStationList {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_string_option(mut self, option: &str, value: &str) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether to include station art url in the response. (Chaining call)
+    pub fn include_station_art_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeStationArtUrl", value)
+    }
+
+    /// The size of the station art image to include in the response. (Chaining call)
+    pub fn station_art_size(self, value: &str) -> Self {
+        self.and_string_option("stationArtSize", value)
+    }
+
+    /// Whether to include ad attributes in the response. (Chaining call)
+    pub fn include_ad_attributes(self, value: bool) -> Self {
+        self.and_boolean_option("includeAdAttributes", value)
+    }
+
+    /// Whether to include station seeds in the response. (Chaining call)
+    pub fn include_station_seeds(self, value: bool) -> Self {
+        self.and_boolean_option("includeStationSeeds", value)
+    }
+
+    /// Whether to include shuffle stations instead of quickmix in the response. (Chaining call)
+    pub fn include_shuffle_instead_of_quick_mix(self, value: bool) -> Self {
+        self.and_boolean_option("includeShuffleInsteadOfQuickMix", value)
+    }
+
+    /// Whether to include recommendations in the response. (Chaining call)
+    pub fn include_recommendations(self, value: bool) -> Self {
+        self.and_boolean_option("includeRecommendations", value)
+    }
+
+    /// Whether to include explanations in the response. (Chaining call)
+    pub fn include_explanations(self, value: bool) -> Self {
+        self.and_boolean_option("includeExplanations", value)
+    }
 }
 
 impl Default for GetStationList {
     fn default() -> Self {
         Self {
-            include_station_art_url: None,
-            station_art_size: None,
-            include_ad_attributes: None,
-            include_station_seeds: None,
-            include_shuffle_instead_of_quick_mix: None,
-            include_recommendations: None,
-            include_explanations: None,
+            optional: HashMap::new(),
         }
     }
 }
@@ -885,6 +967,9 @@ pub struct Station {
     pub allow_edit_description: bool,
     /// Timestamp for when the station was created.
     pub date_created: Timestamp,
+    /// Additional, optional fields of the response.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// Convenience function to do a basic getStationList call.
