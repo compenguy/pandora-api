@@ -958,6 +958,9 @@ pub struct PlaylistAd {
 pub struct PlaylistTrack {
     /// The unique id (token) for the track to be played.
     pub track_token: String,
+    /// The music id (token) used with GetTrack to request additional track
+    /// information.
+    pub music_id: String,
     /// The unique id (token) for the station from which this track was
     /// requested.
     pub station_id: String,
@@ -1217,27 +1220,83 @@ pub struct GetStationResponse {
 #[serde(rename_all = "camelCase")]
 pub struct StationSeeds {
     /// Songs used as seeds for this station.
-    pub songs: Vec<Seed>,
+    pub songs: Vec<SongSeed>,
     /// Atrists used as seeds for this station.
-    pub artist: Vec<Seed>,
+    pub artists: Vec<ArtistSeed>,
     /// Genres used as seeds for this station.
-    pub genres: Vec<Seed>,
+    pub genres: Vec<GenreSeed>,
 }
 
+/// Attributes of a song seed for a station.
 /// ``` json
 ///             "songs": [{
-///                 "seedId": "428301990230109677",
-///                 "artistName": "Tori Amos",
-///                 "artUrl": "http://cont-sjl-1.pandora.com/images/public/amz/5/2/8/5/075678235825_130W_130H.jpg",
-///                 "songName": "Winter",
-///                 "musicToken": "87ef9db1c3f04330"
+///                 "seedId": "5629501782357373",
+///                 "musicToken": "9d8f932edea76ed8425ba2910f7abf8b",
+///                 "songName": "Soul Finger",
+///                 "artistName": "The Bar-Kays",
+///                 "pandoraType": "TR",
+///                 "pandoraId": "TR:852695",
+///                 "artUrl": "http://.../081227857165_130W_130H.jpg",
 ///             }],
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SongSeed {
+    /// Unique identifier/handle for this seed.
+    pub seed_id: String,
+    /// Identifier for the song used for this seed.
+    pub music_token: String,
+    /// Name of the song used for this seed.
+    pub song_name: String,
+    /// Name of the artist for the song used for this seed.
+    pub artist_name: String,
+    /// The type of Pandora object described by the Pandora ID.
+    pub pandora_type: String,
+    /// An identifier for this Pandora object that is unique across all types of Pandora
+    /// objects.
+    pub pandora_id: String,
+    /// Unknown
+    pub art_url: String,
+    /// Unknown fields in the response, if any
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+/// Attributes of an artist seed for a station.
+/// ``` json
 ///             "artists": [{
-///                 "artistName": "Jason Derulo",
-///                 "musicToken": "563f577e00d837a5",
-///                 "seedId": "31525199612287328",
-///                 "artUrl": "http://mediaserver-cont-sv5-1-v4v6.pandora.com/images/public/amg/portrait/pic200/drQ300/Q366/Q36675SDAPJ.jpg"
-///             }],
+///                 "seedId": "5629501764244877",
+///                 "musicToken": "2858b602eb1adfa8",
+///                 "artistName": "Michael Bublé",
+///                 "pandoraType": "AR"
+///                 "pandoraId": "AR:6533",
+///                 "artUrl": "http://.../90W_90H.jpg",
+///                 "icon": {"dominantColor": "602d30","artUrl": ""},
+///             ],}
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistSeed {
+    /// Unique identifier/handle for this seed.
+    pub seed_id: String,
+    /// Identifier for the artist used for this seed.
+    pub music_token: String,
+    /// Name of the artist used for this seed.
+    pub artist_name: String,
+    /// The type of Pandora object described by the Pandora ID.
+    pub pandora_type: String,
+    /// An identifier for this Pandora object that is unique across all types of Pandora
+    /// objects.
+    pub pandora_id: String,
+    /// Artist icon
+    pub icon: HashMap<String, String>,
+    /// Unknown fields in the response, if any
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
+}
+
+/// Attributes of a genre seed for a station.
+/// ``` json
 ///             "genres": [{
 ///                 "musicToken": "cc021b31a48b8acf",
 ///                 "genreName": "Today's Hits",
@@ -1246,69 +1305,16 @@ pub struct StationSeeds {
 /// ```
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum Seed {
-    /// Attributes of a song seed for a station.
-    Song {
-        /// Unique identifier/handle for this seed.
-        seed_id: String,
-        /// Identifier for the song used for this seed.
-        music_token: String,
-        /// Name of the song used for this seed.
-        song_name: String,
-        /// Name of the artist for the song used for this seed.
-        artist_name: String,
-        /// Unknown
-        art_url: String,
-    },
-    /// Attributes of an artist seed for a station.
-    Artist {
-        /// Unique identifier/handle for this seed.
-        seed_id: String,
-        /// Identifier for the artist used for this seed.
-        music_token: String,
-        /// Name of the artist used for this seed.
-        artist_name: String,
-        /// Unknown
-        art_url: String,
-    },
-    /// Attributes of a genre seed for a station.
-    Genre {
-        /// Unique identifier/handle for this seed.
-        seed_id: String,
-        /// Identifier for the genre used for this seed.
-        music_token: String,
-        /// Name of the genre used for this seed.
-        genre_name: String,
-    },
-}
-
-impl Seed {
-    /// Return the name of the object used as a seed.
-    pub fn get_name(&self) -> String {
-        match self {
-            Seed::Song { song_name, .. } => song_name.to_string(),
-            Seed::Artist { artist_name, .. } => artist_name.to_string(),
-            Seed::Genre { genre_name, .. } => genre_name.to_string(),
-        }
-    }
-
-    /// Return the unique identifier/handle used to refer to this seed.
-    pub fn get_seed_id(&self) -> String {
-        match self {
-            Seed::Song { seed_id, .. } => seed_id.to_string(),
-            Seed::Artist { seed_id, .. } => seed_id.to_string(),
-            Seed::Genre { seed_id, .. } => seed_id.to_string(),
-        }
-    }
-
-    /// Return the identifier for the object used as a seed.
-    pub fn get_music_token(&self) -> String {
-        match self {
-            Seed::Song { music_token, .. } => music_token.to_string(),
-            Seed::Artist { music_token, .. } => music_token.to_string(),
-            Seed::Genre { music_token, .. } => music_token.to_string(),
-        }
-    }
+pub struct GenreSeed {
+    /// Unique identifier/handle for this seed.
+    pub seed_id: String,
+    /// Identifier for the genre used for this seed.
+    pub music_token: String,
+    /// Name of the genre used for this seed.
+    pub genre_name: String,
+    /// Unknown fields in the response, if any
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 /// ``` json
