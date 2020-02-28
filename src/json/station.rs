@@ -448,8 +448,9 @@ pub fn delete_station(
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStationsChecksum {
-    /// Unknown
-    pub include_genre_category_ad_url: bool,
+    /// The fields of the deleteStation response are unknown.
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl GetGenreStationsChecksum {
@@ -457,12 +458,25 @@ impl GetGenreStationsChecksum {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
+    }
+
+    /// Whether to request that genre category ad url should be included in the reply. (Chaining call)
+    pub fn include_genre_category_ad_url(self, value: bool) -> Self {
+        self.and_boolean_option("includeGenreCategoryAdUrl", value)
+    }
+
 }
 
 impl Default for GetGenreStationsChecksum {
     fn default() -> Self {
         Self {
-            include_genre_category_ad_url: false,
+            optional: HashMap::new(),
         }
     }
 }
@@ -483,7 +497,9 @@ pub struct GetGenreStationsChecksumResponse {
 pub fn get_genre_stations_checksum(
     session: &PandoraSession,
 ) -> Result<GetGenreStationsChecksumResponse, Error> {
-    GetGenreStationsChecksum::default().response(session)
+    GetGenreStationsChecksum::default()
+        .include_genre_category_ad_url(false)
+        .response(session)
 }
 
 /// Pandora provides a list of predefined stations ("genre stations").
@@ -1060,7 +1076,20 @@ pub fn get_playlist(
     session: &PandoraSession,
     station_token: &str,
 ) -> Result<GetPlaylistResponse, Error> {
-    GetPlaylist::from(&station_token).response(session)
+    GetPlaylist::from(&station_token)
+        .station_is_starting(false)
+        .include_track_length(false)
+        .include_audio_token(false)
+        .xplatform_ad_capable(false)
+        .include_audio_receipt_url(false)
+        .include_backstage_ad_url(false)
+        .include_sharing_ad_url(false)
+        .include_social_ad_url(false)
+        .include_competitive_sep_indicator(false)
+        .include_complete_playlist(false)
+        .include_track_options(false)
+        .audio_ad_pod_capable(false)
+        .response(session)
 }
 
 /// Extended station information includes seeds and feedback.
@@ -1436,7 +1465,9 @@ pub fn get_station(
     session: &PandoraSession,
     station_token: &str,
 ) -> Result<GetStationResponse, Error> {
-    GetStation::from(&station_token).response(session)
+    GetStation::from(&station_token)
+        .include_extended_attributes(false)
+        .response(session)
 }
 
 /// **Unsupported!**

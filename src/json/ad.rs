@@ -142,7 +142,11 @@ pub fn get_ad_metadata(
     session: &PandoraSession,
     ad_token: &str,
 ) -> Result<GetAdMetadataResponse, Error> {
-    GetAdMetadata::from(&ad_token).response(session)
+    GetAdMetadata::from(&ad_token)
+        .return_ad_tracking_tokens(false)
+        .support_audio_ads(false)
+        .include_banner_ad(false)
+        .response(session)
 }
 
 /// Register the tracking tokens associated with the advertisement. The theory is that this should be done just as the advertisement is about to play.

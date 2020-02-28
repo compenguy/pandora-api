@@ -321,7 +321,8 @@ pub fn change_settings(
     username: &str,
     password: &str,
 ) -> Result<ChangeSettingsResponse, Error> {
-    ChangeSettings::new(username, password).response(session)
+    ChangeSettings::new(username, password)
+        .response(session)
 }
 
 /// | Name    | Type  |  Description   |
@@ -672,8 +673,9 @@ pub struct GetFacebookInfoUnsupported {}
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSettings {
-    /// Whether to include Facebook settings in the response.
-    pub include_facebook: bool,
+    /// Optional parameters on the call
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl GetSettings {
@@ -682,18 +684,24 @@ impl GetSettings {
         Self::default()
     }
 
-    /// Create a new GetSettings, and include facebook in the response.
-    pub fn new_with_facebook() -> Self {
-        Self {
-            include_facebook: true,
-        }
+    /// Convenience function for setting boolean flags in the request. (Chaining call)
+    pub fn and_boolean_option(mut self, option: &str, value: bool) -> Self {
+        self.optional
+            .insert(option.to_string(), serde_json::value::Value::from(value));
+        self
     }
+
+    /// Whether to include Facebook settings in the response. (Chaining call)
+    pub fn include_facebook(self, value: bool) -> Self {
+        self.and_boolean_option("includeFacebook", value)
+    }
+
 }
 
 impl Default for GetSettings {
     fn default() -> Self {
         Self {
-            include_facebook: false,
+            optional: HashMap::new()
         }
     }
 }
@@ -709,7 +717,9 @@ pub struct GetSettingsResponse {
 
 /// Convenience function to do a basic getSettings call.
 pub fn get_settings(session: &PandoraSession) -> Result<GetSettingsResponse, Error> {
-    GetSettings::new().response(session)
+    GetSettings::new()
+        .include_facebook(false)
+        .response(session)
 }
 
 /// To check if the station list was modified by another client the checksum
@@ -974,7 +984,14 @@ pub struct Station {
 
 /// Convenience function to do a basic getStationList call.
 pub fn get_station_list(session: &PandoraSession) -> Result<GetStationListResponse, Error> {
-    GetStationList::new().response(session)
+    GetStationList::new()
+        .include_station_art_url(false)
+        .include_ad_attributes(false)
+        .include_station_seeds(false)
+        .include_shuffle_instead_of_quick_mix(false)
+        .include_recommendations(false)
+        .include_explanations(false)
+        .response(session)
 }
 
 /// The request has no parameters.

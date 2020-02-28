@@ -82,34 +82,19 @@ impl PartnerLogin {
         self
     }
 
-    /// Request to include urls in the response. (Chaining call)
-    pub fn include_urls(self) -> Self {
-        self.and_boolean_option("includeUrls", true)
+    /// Whether to request to include urls in the response. (Chaining call)
+    pub fn include_urls(self, value: bool) -> Self {
+        self.and_boolean_option("includeUrls", value)
     }
 
-    /// Request to not include urls in the response. (Chaining call)
-    pub fn no_include_urls(self) -> Self {
-        self.and_boolean_option("includeUrls", false)
+    /// Whether to request to include the device type in the response. (Chaining call)
+    pub fn return_device_type(self, value: bool) -> Self {
+        self.and_boolean_option("returnDeviceType", value)
     }
 
-    /// Request to include the device type in the response. (Chaining call)
-    pub fn return_device_type(self) -> Self {
-        self.and_boolean_option("returnDeviceType", true)
-    }
-
-    /// Request to not include the device type in the response. (Chaining call)
-    pub fn no_return_device_type(self) -> Self {
-        self.and_boolean_option("returnDeviceType", false)
-    }
-
-    /// Request to return a prompt to update versions in the response. (Chaining call)
-    pub fn return_update_prompt_versions(self) -> Self {
-        self.and_boolean_option("returnUpdatePromptVersions", true)
-    }
-
-    /// Request to not return a prompt to update versions in the response. (Chaining call)
-    pub fn no_return_update_prompt_versions(self) -> Self {
-        self.and_boolean_option("returnUpdatePromptVersions", false)
+    /// Whether to request to return a prompt to update versions in the response. (Chaining call)
+    pub fn return_update_prompt_versions(self, value: bool) -> Self {
+        self.and_boolean_option("returnUpdatePromptVersions", value)
     }
 
     /// This is a wrapper around the `response` method from the
@@ -195,7 +180,11 @@ pub fn partner_login(
     password: &str,
     device_model: &str,
 ) -> Result<PartnerLoginResponse, Error> {
-    PartnerLogin::new(username, password, device_model, None).merge_response(session)
+    PartnerLogin::new(username, password, device_model, None)
+        .include_urls(false)
+        .return_device_type(false)
+        .return_update_prompt_versions(false)
+        .merge_response(session)
 }
 
 /// This request *must* be sent over a TLS-encrypted link. It authenticates the Pandora user by sending his username, usually his email address, and password as well as the partnerAuthToken obtained by Partner login.
@@ -514,7 +503,34 @@ pub fn user_login(
     username: &str,
     password: &str,
 ) -> Result<UserLoginResponse, Error> {
-    UserLogin::new(username, password).merge_response(session)
+    UserLogin::new(username, password)
+        .return_genre_stations(false)
+        .return_capped(false)
+        .include_pandora_one_info(false)
+        .include_demographics(false)
+        .include_ad_attributes(false)
+        .return_station_list(false)
+        .include_station_art_url(false)
+        .include_station_seeds(false)
+        .include_shuffle_instead_of_quick_mix(false)
+        .return_collect_track_lifetime_stats(false)
+        .return_is_subscriber(false)
+        .xplatform_ad_capable(false)
+        .complimentary_sponsor_supported(false)
+        .include_subscription_expiration(false)
+        .return_has_used_trial(false)
+        .return_userstate(false)
+        .include_account_message(false)
+        .include_user_webname(false)
+        .include_listening_hours(false)
+        .include_facebook(false)
+        .include_twitter(false)
+        .include_daily_skip_limit(false)
+        .include_skip_delay(false)
+        .include_googleplay(false)
+        .include_show_user_recommendations(false)
+        .include_advertiser_attributes(false)
+        .merge_response(session)
 }
 
 #[cfg(test)]

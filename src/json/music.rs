@@ -152,7 +152,10 @@ impl<TS: ToString> From<&TS> for Search {
 
 /// Convenience function to do a basic addSongBookmark call.
 pub fn search(session: &PandoraSession, search_text: &str) -> Result<SearchResponse, Error> {
-    Search::from(&search_text).response(session)
+    Search::from(&search_text)
+        .include_near_matches(false)
+        .include_genre_stations(false)
+        .response(session)
 }
 
 /// Matching songs, artists, and genre stations are returned in three separate lists.
