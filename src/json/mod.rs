@@ -29,7 +29,7 @@ use serde_json;
 
 use crate::errors::Error;
 use crate::json::auth::{PartnerLogin, PartnerLoginResponse};
-use crate::json::errors::JsonError;
+use crate::json::errors::{JsonError, JsonErrorKind};
 
 /// A builder to construct the properties of an http request to Pandora.
 #[derive(Debug, Clone)]
@@ -284,7 +284,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
     /// the built request.
     fn request(
         &self,
-        session: &PandoraSession,
+        session: &mut PandoraSession,
     ) -> std::result::Result<reqwest::blocking::RequestBuilder, Self::Error> {
         let mut tmp_session = session.clone();
         tmp_session
@@ -300,7 +300,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
     /// body json, and deserialize it into the Self::Response type.
     fn response(
         &self,
-        session: &PandoraSession,
+        session: &mut PandoraSession,
     ) -> std::result::Result<Self::Response, Self::Error> {
         let response = self.request(session)?.send().map_err(Self::Error::from)?;
         response.error_for_status_ref().map_err(Self::Error::from)?;
@@ -323,7 +323,22 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         }
 
         let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
-        result.map_err(Self::Error::from)
+        // Detect errors that indicate that our session tokens aren't valid, and clear them
+        match result {
+            Err(JsonError {
+                kind: JsonErrorKind::InvalidAuthToken,
+                message,
+            }) => {
+                session.session_tokens_mut().clear_partner_tokens();
+                session.session_tokens_mut().clear_user_tokens();
+                Err(JsonError {
+                    kind: JsonErrorKind::InvalidAuthToken,
+                    message,
+                })
+            }
+            res => res,
+        }
+        .map_err(Self::Error::from)
     }
 }
 
@@ -684,6 +699,19 @@ impl SessionTokens {
     pub fn get_sync_time(&self) -> Option<u64> {
         self.sync_time
             .and_then(|st| self.local_time_base.map(|ltb| ltb.elapsed().as_secs() + st))
+    }
+
+    /// Clears all active partner session tokens.
+    pub fn clear_partner_tokens(&mut self) {
+        self.partner_id = None;
+        self.partner_token = None;
+        self.clear_sync_time();
+    }
+
+    /// Clears all active user session tokens.
+    pub fn clear_user_tokens(&mut self) {
+        self.user_id = None;
+        self.user_token = None;
     }
 }
 

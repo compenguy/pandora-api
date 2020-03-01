@@ -89,7 +89,10 @@ pub struct GetTrackResponse {
 }
 
 /// Convenience function to do a basic getTrack call.
-pub fn get_track(session: &PandoraSession, track_token: &str) -> Result<GetTrackResponse, Error> {
+pub fn get_track(
+    session: &mut PandoraSession,
+    track_token: &str,
+) -> Result<GetTrackResponse, Error> {
     GetTrack::from(&track_token).response(session)
 }
 
@@ -151,7 +154,7 @@ impl<TS: ToString> From<&TS> for Search {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn search(session: &PandoraSession, search_text: &str) -> Result<SearchResponse, Error> {
+pub fn search(session: &mut PandoraSession, search_text: &str) -> Result<SearchResponse, Error> {
     Search::from(&search_text)
         .include_near_matches(false)
         .include_genre_stations(false)
@@ -268,25 +271,26 @@ mod tests {
     #[test]
     fn search_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        let _search_response = search(&session, "INXS").expect("Failed completing search request");
+        let _search_response =
+            search(&mut session, "INXS").expect("Failed completing search request");
         let _search_response: SearchResponse = Search::from(&"Alternative")
             .include_genre_stations(true)
-            .response(&session)
+            .response(&mut session)
             .expect("Failed completing search request");
     }
 
     #[test]
     fn get_track_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        for station in get_station_list(&session)
+        for station in get_station_list(&mut session)
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
-            for track in get_playlist(&session, &station.station_token)
+            for track in get_playlist(&mut session, &station.station_token)
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -295,8 +299,8 @@ mod tests {
                 if let Some(serde_json::value::Value::String(music_id)) =
                     track.optional.get("musicId")
                 {
-                    let _response =
-                        get_track(&session, music_id).expect("Failed getting track information");
+                    let _response = get_track(&mut session, music_id)
+                        .expect("Failed getting track information");
                 }
             }
         }

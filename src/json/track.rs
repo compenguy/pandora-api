@@ -74,7 +74,7 @@ pub struct Explanation {
 
 /// Convenience function to do a basic explainTrack call.
 pub fn explain_track(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<ExplainTrackResponse, Error> {
     ExplainTrack::from(&track_token).response(session)
@@ -95,21 +95,21 @@ mod tests {
     #[test]
     fn explain_track_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        if let Some(station) = get_station_list(&session)
+        if let Some(station) = get_station_list(&mut session)
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
             .first()
         {
-            if let Some(track) = get_playlist(&session, &station.station_token)
+            if let Some(track) = get_playlist(&mut session, &station.station_token)
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_track())
                 .next()
             {
-                let explain_track = explain_track(&session, &track.track_token)
+                let explain_track = explain_track(&mut session, &track.track_token)
                     .expect("Failed submitting track explanation request");
                 println!("Track explanation: {:?}", explain_track);
             } else {

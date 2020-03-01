@@ -40,14 +40,14 @@ pub struct CheckLicensingResponse {
 }
 
 /// Convenience function to check geographic licensing restrictions.
-pub fn check_licensing(session: &PandoraSession) -> Result<CheckLicensingResponse, Error> {
+pub fn check_licensing(session: &mut PandoraSession) -> Result<CheckLicensingResponse, Error> {
     CheckLicensing::default().response(session)
 }
 
 /// **Unsupported!**
 /// Undocumented method
 /// [test.echo()](https://6xq.net/pandora-apidoc/json/methods/)
-pub struct EchoUnsuported {}
+pub struct EchoUnsupported {}
 
 #[cfg(test)]
 mod tests {
@@ -57,10 +57,10 @@ mod tests {
     #[test]
     fn licensing_check_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
         let check_licensing_response =
-            check_licensing(&session).expect("Error making test.checkLicensing request");
+            check_licensing(&mut session).expect("Error making test.checkLicensing request");
         println!("test.checkLicensing() => {:?}", check_licensing_response);
     }
 }

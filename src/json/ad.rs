@@ -139,7 +139,7 @@ pub struct AudioStream {
 
 /// Convenience function to do a basic getAdMetadata call.
 pub fn get_ad_metadata(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     ad_token: &str,
 ) -> Result<GetAdMetadataResponse, Error> {
     GetAdMetadata::from(&ad_token)
@@ -197,7 +197,7 @@ pub struct RegisterAdResponse {
 
 /// Convenience function to do a basic registerAd call.
 pub fn register_ad(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_id: &str,
     ad_tracking_tokens: Vec<String>,
 ) -> Result<RegisterAdResponse, Error> {
@@ -217,13 +217,13 @@ mod tests {
     #[test]
     fn ad_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        for station in get_station_list(&session)
+        for station in get_station_list(&mut session)
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
-            for ad in get_playlist(&session, &station.station_token)
+            for ad in get_playlist(&mut session, &station.station_token)
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -233,12 +233,12 @@ mod tests {
                     .return_ad_tracking_tokens(true)
                     .support_audio_ads(true)
                     .include_banner_ad(true)
-                    .response(&session)
+                    .response(&mut session)
                     .expect("Failed getting ad metadata");
 
                 if !ad_metadata.ad_tracking_tokens.is_empty() {
                     let _ad_registered = register_ad(
-                        &session,
+                        &mut session,
                         &station.station_id,
                         ad_metadata.ad_tracking_tokens,
                     )

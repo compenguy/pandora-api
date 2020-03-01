@@ -153,7 +153,7 @@ pub struct CanSubscribeResponse {
 }
 
 /// Convenience function to do a basic canSubscribe call.
-pub fn can_subscribe(session: &PandoraSession) -> Result<CanSubscribeResponse, Error> {
+pub fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeResponse, Error> {
     CanSubscribe::new().response(session)
 }
 
@@ -317,12 +317,11 @@ pub struct ChangeSettingsResponse {
 /// is basically useless for actually changing settings, but is useful
 /// to return the current values for user account settings.
 pub fn change_settings(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<ChangeSettingsResponse, Error> {
-    ChangeSettings::new(username, password)
-        .response(session)
+    ChangeSettings::new(username, password).response(session)
 }
 
 /// | Name    | Type  |  Description   |
@@ -431,7 +430,7 @@ pub struct CreateUserResponse {
 
 /// Convenience function to do a basic emailPassword call.
 pub fn create_user(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     username: &str,
     password: &str,
     gender: UserGender,
@@ -484,7 +483,7 @@ pub struct EmailPasswordResponse {
 
 /// Convenience function to do a basic emailPassword call.
 pub fn email_password(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     username: &str,
 ) -> Result<EmailPasswordResponse, Error> {
     EmailPassword::from(&username).response(session)
@@ -658,7 +657,7 @@ pub struct SongBookmark {
 }
 
 /// Convenience function to do a basic getBookmarks call.
-pub fn get_bookmarks(session: &PandoraSession) -> Result<GetBookmarksResponse, Error> {
+pub fn get_bookmarks(session: &mut PandoraSession) -> Result<GetBookmarksResponse, Error> {
     GetBookmarks::new().response(session)
 }
 
@@ -695,13 +694,12 @@ impl GetSettings {
     pub fn include_facebook(self, value: bool) -> Self {
         self.and_boolean_option("includeFacebook", value)
     }
-
 }
 
 impl Default for GetSettings {
     fn default() -> Self {
         Self {
-            optional: HashMap::new()
+            optional: HashMap::new(),
         }
     }
 }
@@ -716,10 +714,8 @@ pub struct GetSettingsResponse {
 }
 
 /// Convenience function to do a basic getSettings call.
-pub fn get_settings(session: &PandoraSession) -> Result<GetSettingsResponse, Error> {
-    GetSettings::new()
-        .include_facebook(false)
-        .response(session)
+pub fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsResponse, Error> {
+    GetSettings::new().include_facebook(false).response(session)
 }
 
 /// To check if the station list was modified by another client the checksum
@@ -983,7 +979,7 @@ pub struct Station {
 }
 
 /// Convenience function to do a basic getStationList call.
-pub fn get_station_list(session: &PandoraSession) -> Result<GetStationListResponse, Error> {
+pub fn get_station_list(session: &mut PandoraSession) -> Result<GetStationListResponse, Error> {
     GetStationList::new()
         .include_station_art_url(false)
         .include_ad_attributes(false)
@@ -1060,7 +1056,7 @@ pub struct GetUsageInfoResponse {
 }
 
 /// Convenience function to get account usage info.
-pub fn get_usage_info(session: &PandoraSession) -> Result<GetUsageInfoResponse, Error> {
+pub fn get_usage_info(session: &mut PandoraSession) -> Result<GetUsageInfoResponse, Error> {
     GetUsageInfo {}.response(session)
 }
 
@@ -1246,7 +1242,7 @@ pub struct ValidateUsernameResponse {
 
 /// Convenience function to verify that a username is either valid or unique.
 pub fn validate_username(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     username: &str,
 ) -> Result<ValidateUsernameResponse, Error> {
     ValidateUsername {
@@ -1264,20 +1260,20 @@ mod tests {
     #[test]
     fn user_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        let _can_subscribe =
-            can_subscribe(&session).expect("Failed submitting subscription information request");
+        let _can_subscribe = can_subscribe(&mut session)
+            .expect("Failed submitting subscription information request");
 
         let _get_settings =
-            get_settings(&session).expect("Failed submitting settings info request");
+            get_settings(&mut session).expect("Failed submitting settings info request");
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();
         let test_password_raw = include_str!("../../test_password.txt");
         let test_password = test_password_raw.trim();
 
-        let _change_settings = change_settings(&session, &test_username, &test_password)
+        let _change_settings = change_settings(&mut session, &test_username, &test_password)
             .expect("Failed submitting settings change request");
     }
 
@@ -1286,9 +1282,9 @@ mod tests {
     #[test]
     fn email_password_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        let email_password = email_password(&session).expect("Failed submitting settings change request");
+        let email_password = email_password(&mut session).expect("Failed submitting settings change request");
     }
     */
 
@@ -1318,7 +1314,7 @@ mod tests {
         // Theory is that the above credentials are for an existing account,
         // so this should fail as a duplicate account.
         match create_user(
-            &session,
+            &mut session,
             &test_username,
             &test_password,
             test_gender,

@@ -132,7 +132,7 @@ pub struct AddFeedbackResponse {
 
 /// Convenience function to do a basic addFeedback call.
 pub fn add_feedback(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
     track_token: &str,
     is_positive: bool,
@@ -205,7 +205,7 @@ pub struct AddMusicResponse {
 
 /// Convenience function to do a basic addMusic call.
 pub fn add_music(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
     music_token: &str,
 ) -> Result<AddMusicResponse, Error> {
@@ -290,7 +290,7 @@ pub struct CreateStationResponse {
 
 /// Convenience function to do a basic createStation call.
 pub fn create_station_from_track_song(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_track_song(track_token).response(session)
@@ -298,7 +298,7 @@ pub fn create_station_from_track_song(
 
 /// Convenience function to do a basic createStation call.
 pub fn create_station_from_artist(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_track_artist(track_token).response(session)
@@ -306,7 +306,7 @@ pub fn create_station_from_artist(
 
 /// Convenience function to do a basic createStation call.
 pub fn create_station_from_music_token(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     music_token: &str,
 ) -> Result<CreateStationResponse, Error> {
     CreateStation::new_from_music_token(music_token).response(session)
@@ -350,7 +350,7 @@ pub struct DeleteFeedbackResponse {
 
 /// Convenience function to do a basic deleteFeedback call.
 pub fn delete_feedback(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     feedback_id: &str,
 ) -> Result<DeleteFeedbackResponse, Error> {
     DeleteFeedback::from(&feedback_id).response(session)
@@ -394,7 +394,10 @@ pub struct DeleteMusicResponse {
 }
 
 /// Convenience function to do a basic deleteMusic call.
-pub fn delete_music(session: &PandoraSession, seed_id: &str) -> Result<DeleteMusicResponse, Error> {
+pub fn delete_music(
+    session: &mut PandoraSession,
+    seed_id: &str,
+) -> Result<DeleteMusicResponse, Error> {
     DeleteMusic::from(&seed_id).response(session)
 }
 
@@ -434,7 +437,7 @@ pub struct DeleteStationResponse {
 
 /// Convenience function to do a basic deleteStation call.
 pub fn delete_station(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<DeleteStationResponse, Error> {
     DeleteStation::from(&station_token).response(session)
@@ -470,7 +473,6 @@ impl GetGenreStationsChecksum {
     pub fn include_genre_category_ad_url(self, value: bool) -> Self {
         self.and_boolean_option("includeGenreCategoryAdUrl", value)
     }
-
 }
 
 impl Default for GetGenreStationsChecksum {
@@ -495,7 +497,7 @@ pub struct GetGenreStationsChecksumResponse {
 
 /// Convenience function to do a basic getGenreStationsChecksum call.
 pub fn get_genre_stations_checksum(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
 ) -> Result<GetGenreStationsChecksumResponse, Error> {
     GetGenreStationsChecksum::default()
         .include_genre_category_ad_url(false)
@@ -578,7 +580,7 @@ pub struct GenreStation {
 }
 
 /// Convenience function to do a basic getGenreStations call.
-pub fn get_genre_stations(session: &PandoraSession) -> Result<GetGenreStationsResponse, Error> {
+pub fn get_genre_stations(session: &mut PandoraSession) -> Result<GetGenreStationsResponse, Error> {
     GetGenreStations::default().response(session)
 }
 
@@ -1073,7 +1075,7 @@ pub struct AudioStream {
 
 /// Convenience function to do a basic getPlaylist call.
 pub fn get_playlist(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<GetPlaylistResponse, Error> {
     GetPlaylist::from(&station_token)
@@ -1462,7 +1464,7 @@ pub struct TrackFeedback {
 
 /// Convenience function to do a basic getStation call.
 pub fn get_station(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<GetStationResponse, Error> {
     GetStation::from(&station_token)
@@ -1510,7 +1512,7 @@ pub struct RenameStationResponse {
 
 /// Convenience function to do a basic renameStation call.
 pub fn rename_station(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
     station_name: &str,
 ) -> Result<RenameStationResponse, Error> {
@@ -1565,7 +1567,7 @@ pub struct ShareStationResponse {
 
 /// Convenience function to do a basic shareStation call.
 pub fn share_station(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_id: &str,
     station_token: &str,
     emails: Vec<String>,
@@ -1610,7 +1612,7 @@ pub struct TransformSharedStationResponse {
 
 /// Convenience function to do a basic transformSharedStation call.
 pub fn transform_shared_station(
-    session: &PandoraSession,
+    session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<TransformSharedStationResponse, Error> {
     TransformSharedStation::from(&station_token).response(session)
@@ -1632,12 +1634,12 @@ mod tests {
         // by a previous, failed test execution, look for stations named either
         // "INXS Radio" or "XSNI Radio"
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
         let artist_search =
-            search(&session, "INXS").expect("Failed completing artist search request");
+            search(&mut session, "INXS").expect("Failed completing artist search request");
 
-        let additional_artist_search = search(&session, "Panic! At the Disco")
+        let additional_artist_search = search(&mut session, "Panic! At the Disco")
             .expect("Failed completing artist search request");
 
         if let Some(ArtistMatch { music_token, .. }) = artist_search
@@ -1646,11 +1648,11 @@ mod tests {
             .filter(|am| am.score == 100)
             .next()
         {
-            let created_station = create_station_from_music_token(&session, &music_token)
+            let created_station = create_station_from_music_token(&mut session, &music_token)
                 .expect("Failed creating station from search result");
 
             let _renamed_station =
-                rename_station(&session, &created_station.station_token, "XSNI Radio")
+                rename_station(&mut session, &created_station.station_token, "XSNI Radio")
                     .expect("Failed renaming station");
 
             if let Some(ArtistMatch { music_token, .. }) = additional_artist_search
@@ -1659,14 +1661,15 @@ mod tests {
                 .filter(|am| am.score == 100)
                 .next()
             {
-                let added_music = add_music(&session, &created_station.station_token, music_token)
-                    .expect("Failed adding music to station");
+                let added_music =
+                    add_music(&mut session, &created_station.station_token, music_token)
+                        .expect("Failed adding music to station");
 
-                let _del_music = delete_music(&session, &added_music.seed_id)
+                let _del_music = delete_music(&mut session, &added_music.seed_id)
                     .expect("Failed deleting music from station");
             }
 
-            let _del_station = delete_station(&session, &created_station.station_token)
+            let _del_station = delete_station(&mut session, &created_station.station_token)
                 .expect("Failed deleting station");
         }
     }
@@ -1676,12 +1679,12 @@ mod tests {
     #[test]
     fn genre_stations_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        let genre_stations = get_genre_stations(&session)
+        let genre_stations = get_genre_stations(&mut session)
             .expect("Failed getting genre stations");
 
-        let genre_stations_checksum = get_genre_stations_checksum(&session)
+        let genre_stations_checksum = get_genre_stations_checksum(&mut session)
             .expect("Failed getting genre stations checksum");
     }
     */
@@ -1689,9 +1692,9 @@ mod tests {
     #[test]
     fn station_feedback_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).expect("Failed initializing login session");
 
-        for station in get_station_list(&session)
+        for station in get_station_list(&mut session)
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
@@ -1700,7 +1703,7 @@ mod tests {
             // ratings during this test.  This also exercises get_station.
             let station = GetStation::from(&station.station_token)
                 .include_extended_attributes(true)
-                .response(&session)
+                .response(&mut session)
                 .expect("Failed getting station attributes");
 
             let mut protected_tracks: HashSet<String> = HashSet::new();
@@ -1719,7 +1722,7 @@ mod tests {
                     .map(|tf| tf.song_name.clone()),
             );
 
-            for track in get_playlist(&session, &station.station_token)
+            for track in get_playlist(&mut session, &station.station_token)
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -1730,18 +1733,26 @@ mod tests {
                 }
 
                 // Thumbs-up track
-                let feedback =
-                    add_feedback(&session, &station.station_token, &track.track_token, true)
-                        .expect("Failed adding positive feedback to track");
+                let feedback = add_feedback(
+                    &mut session,
+                    &station.station_token,
+                    &track.track_token,
+                    true,
+                )
+                .expect("Failed adding positive feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
                     .expect("Failed deleting positive feedback from track");
                 // Thumbs-down track
-                let feedback =
-                    add_feedback(&session, &station.station_token, &track.track_token, false)
-                        .expect("Failed adding negative feedback to track");
+                let feedback = add_feedback(
+                    &mut session,
+                    &station.station_token,
+                    &track.track_token,
+                    false,
+                )
+                .expect("Failed adding negative feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
                     .expect("Failed deleting negative feedback from track");
 
                 // Finished test, stop looping through

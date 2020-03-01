@@ -238,8 +238,8 @@ impl std::fmt::Display for JsonErrorKind {
 /// Pandora JSON API call error description
 #[derive(Debug, Clone, PartialEq)]
 pub struct JsonError {
-    kind: JsonErrorKind,
-    message: Option<String>,
+    pub(crate) kind: JsonErrorKind,
+    pub(crate) message: Option<String>,
 }
 
 impl JsonError {
