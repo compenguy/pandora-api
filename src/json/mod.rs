@@ -335,6 +335,17 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
                     kind: JsonErrorKind::InvalidAuthToken,
                     message,
                 })
+            },
+            Err(JsonError {
+                kind: JsonErrorKind::InsufficientConnectivity,
+                message,
+            }) => {
+                session.session_tokens_mut().clear_partner_tokens();
+                session.session_tokens_mut().clear_user_tokens();
+                Err(JsonError {
+                    kind: JsonErrorKind::InsufficientConnectivity,
+                    message,
+                })
             }
             res => res,
         }
