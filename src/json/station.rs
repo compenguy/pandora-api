@@ -9,11 +9,21 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use pandora_api_derive::PandoraRequest;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
+use serde_json::value::Value;
+
 
 use crate::errors::Error;
 use crate::json::errors::JsonError;
 use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
+
+/// Helper for deserializing comma separated lists as a Vec<String>
+fn de_comma_list<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
+    match Value::deserialize(deserializer)? {
+        Value::String(s) => Ok(s.split(",").map(|s| s.trim().to_string()).filter(|s| s.is_empty()).collect()),
+        _ => Err(de::Error::custom("Unsupported field type. Expected 'String'.")),
+    }
+}
 
 /// Songs can be “loved” or “banned”. Both influence the music played on the
 /// station. Banned songs are never played again on this particular station.
@@ -1023,9 +1033,8 @@ pub struct PlaylistTrack {
     /// The default audio streams available for this track.
     pub audio_url_map: AudioQuality,
     /// Additional audio stream formats requested for this track.
-    /// TODO: This field is documented as able to be a String
-    /// or a Vec<String>.
-    pub additional_audio_url: String,
+    #[serde(default, deserialize_with = "de_comma_list")]
+    pub additional_audio_url: Vec<String>,
     /// A floating point value, encoded as a string, representing the track gain
     /// that should be applied for playback.
     pub track_gain: String,
