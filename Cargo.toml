@@ -8,6 +8,7 @@ repository = "https://github.com/compenguy/pandora-api.git"
 description = "Low-level bindings to the (unofficial) Pandora web api."
 
 [dependencies]
+thiserror = "1.0"
 url = "2.1"
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 rust-crypto = "0.2"
