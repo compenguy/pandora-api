@@ -154,9 +154,10 @@ pub struct PartnerLoginResponse {
     /// Unknown field
     pub station_skip_limit: u32,
     /// Unknown field
-    pub device_properties: HashMap<String, serde_json::value::Value>,
-    /// Unknown field
     pub urls: Option<HashMap<String, String>>,
+    /// Optional response fields
+    #[serde(flatten)]
+    pub optional: HashMap<String, serde_json::value::Value>,
 }
 
 impl ToPartnerTokens for PartnerLoginResponse {
