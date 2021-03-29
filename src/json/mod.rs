@@ -844,27 +844,27 @@ mod tests {
     // InsufficientConnectivity errors are resulting from simultaneously
     // creating a large number of sessions, creating race conditions or
     // invalidating tokens.
-    pub fn session_login(partner: &Partner) -> Result<PandoraSession, Error> {
+    pub async fn session_login(partner: &Partner) -> Result<PandoraSession, Error> {
         let mut session = partner.init_session();
-        let _partner_login = partner.login(&mut session)?;
+        let _partner_login = partner.login(&mut session).await?;
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();
         let test_password_raw = include_str!("../../test_password.txt");
         let test_password = test_password_raw.trim();
 
-        let user_login = user_login(&mut session, &test_username, &test_password)?;
+        let user_login = user_login(&mut session, &test_username, &test_password).await?;
         session.update_user_tokens(&user_login);
         Ok(session)
     }
 
-    #[test]
-    fn partner_test() {
+    #[async_std::test]
+    async fn partner_test() {
         let partner = Partner::default();
         let mut session = partner.init_session();
-        let partner_login = partner
+        let _partner_login = partner
             .login(&mut session)
+            .await
             .expect("Failed while performing partner login");
-        session.update_partner_tokens(&partner_login);
     }
 }

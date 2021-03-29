@@ -1277,16 +1277,20 @@ mod tests {
     use crate::errors;
     use crate::json::{errors::JsonErrorKind, tests::session_login, Partner};
 
-    #[test]
-    fn user_test() {
+    #[async_std::test]
+    async fn user_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
         let _can_subscribe = can_subscribe(&mut session)
+            .await
             .expect("Failed submitting subscription information request");
 
-        let _get_settings =
-            get_settings(&mut session).expect("Failed submitting settings info request");
+        let _get_settings = get_settings(&mut session)
+            .await
+            .expect("Failed submitting settings info request");
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();
@@ -1294,6 +1298,7 @@ mod tests {
         let test_password = test_password_raw.trim();
 
         let _change_settings = change_settings(&mut session, &test_username, &test_password)
+            .await
             .expect("Failed submitting settings change request");
     }
 
@@ -1308,13 +1313,14 @@ mod tests {
     }
     */
 
-    #[test]
+    #[async_std::test]
     #[should_panic(expected = "Invalid country code.")]
-    fn create_user_test() {
+    async fn create_user_test() {
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
             .login(&mut session)
+            .await
             .expect("Failed completing partner login");
         session.update_partner_tokens(&partner_login);
 
@@ -1341,7 +1347,9 @@ mod tests {
             test_birth,
             test_zip,
             test_cc,
-        ) {
+        )
+        .await
+        {
             Ok(cu) => println!("User successfully created? {:?}", cu),
             Err(errors::Error::PandoraJsonRequestError(e))
                 if e.kind() == JsonErrorKind::InvalidCountryCode =>

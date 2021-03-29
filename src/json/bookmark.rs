@@ -262,17 +262,21 @@ mod tests {
         Partner,
     };
 
-    #[test]
-    fn bookmark_test() {
+    #[async_std::test]
+    async fn bookmark_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
         if let Some(station) = get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
             .first()
         {
             if let Some(track) = get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -280,12 +284,13 @@ mod tests {
                 .next()
             {
                 let artist_bookmark = add_artist_bookmark(&mut session, &track.track_token)
+                    .await
                     .expect("Failed submitting artist bookmark creation request");
                 println!("Bookmark creation result: {:?}", artist_bookmark);
 
             /* TODO: song bookmark deletion doesn't seem to work yet, so lets
              * not go creating more with each run.
-            let song_bookmark = add_song_bookmark(&mut session, &track.track_token)
+            let song_bookmark = add_song_bookmark(&mut session, &track.track_token).await
                 .expect("Failed submitting song bookmark creation request");
             println!("Bookmark creation result: {:?}", song_bookmark);
             */
@@ -296,18 +301,20 @@ mod tests {
             panic!("Station list request returned no results, so no bookmarkable content.");
         }
 
-        let user_bookmarks =
-            get_bookmarks(&mut session).expect("Failed submitting request for user bookmarks");
+        let user_bookmarks = get_bookmarks(&mut session)
+            .await
+            .expect("Failed submitting request for user bookmarks");
 
         for artist_bookmark in user_bookmarks.artists {
             let _del_bookmark =
                 delete_artist_bookmark(&mut session, &artist_bookmark.bookmark_token)
+                    .await
                     .expect("Failed submitting artist bookmark deletion request");
         }
 
         /* TODO: song bookmark deletion is borken, can't figure out why
         for song_bookmark in user_bookmarks.songs {
-            let _del_bookmark = delete_artist_bookmark(&mut session, &song_bookmark.bookmark_token)
+            let _del_bookmark = delete_artist_bookmark(&mut session, &song_bookmark.bookmark_token).await
                 .expect("Failed submitting song bookmark deletion request");
         }
         */

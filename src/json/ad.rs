@@ -217,27 +217,35 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn ad_test() {
+    #[async_std::test]
+    async fn ad_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
         for station in get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
             for ad in get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_ad())
             {
-                let ad_metadata = GetAdMetadata::from(&ad.ad_token)
-                    .return_ad_tracking_tokens(true)
-                    .support_audio_ads(true)
-                    .include_banner_ad(true)
-                    .response(&mut session)
-                    .expect("Failed getting ad metadata");
+                let ad_metadata_result: Result<GetAdMetadataResponse, Error> = PandoraApiCall::new(
+                    GetAdMetadata::from(&ad.ad_token)
+                        .return_ad_tracking_tokens(true)
+                        .support_audio_ads(true)
+                        .include_banner_ad(true),
+                )
+                .response(&mut session)
+                .await;
+
+                let ad_metadata = ad_metadata_result.expect("Failed getting ad metadata");
 
                 if !ad_metadata.ad_tracking_tokens.is_empty() {
                     let _ad_registered = register_ad(
@@ -245,6 +253,7 @@ mod tests {
                         &station.station_id,
                         ad_metadata.ad_tracking_tokens,
                     )
+                    .await
                     .expect("Failed registering ad");
                 }
             }
