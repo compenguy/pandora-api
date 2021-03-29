@@ -8,7 +8,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
+use crate::json::{PandoraApiCall, PandoraApiRequest, PandoraSession, Timestamp};
 
 /// | Name | Type | Description |
 /// | trackToken | string | |
@@ -75,11 +75,13 @@ pub struct AddArtistBookmarkResponse {
 }
 
 /// Convenience function to do a basic addArtistBookmark call.
-pub fn add_artist_bookmark(
+pub async fn add_artist_bookmark(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<AddArtistBookmarkResponse, Error> {
-    AddArtistBookmark::from(&track_token).response(session)
+    PandoraApiCall::new(AddArtistBookmark::from(&track_token))
+        .response(session)
+        .await
 }
 
 /// | Name | Type | Description |
@@ -159,11 +161,13 @@ pub struct AddSongBookmarkResponse {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn add_song_bookmark(
+pub async fn add_song_bookmark(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<AddSongBookmarkResponse, Error> {
-    AddSongBookmark::from(&track_token).response(session)
+    PandoraApiCall::new(AddSongBookmark::from(&track_token))
+        .response(session)
+        .await
 }
 
 /// Bookmarks can be deleted
@@ -199,11 +203,13 @@ impl<TS: ToString> From<&TS> for DeleteArtistBookmark {
 pub struct DeleteArtistBookmarkResponse {}
 
 /// Convenience function to do a basic deleteArtistBookmark call.
-pub fn delete_artist_bookmark(
+pub async fn delete_artist_bookmark(
     session: &mut PandoraSession,
     bookmark_token: &str,
 ) -> Result<DeleteArtistBookmarkResponse, Error> {
-    DeleteArtistBookmark::from(&bookmark_token).response(session)
+    PandoraApiCall::new(DeleteArtistBookmark::from(&bookmark_token))
+        .response(session)
+        .await
 }
 
 /// Bookmarks can be deleted
@@ -239,11 +245,13 @@ impl<TS: ToString> From<&TS> for DeleteSongBookmark {
 pub struct DeleteSongBookmarkResponse {}
 
 /// Convenience function to do a basic deleteSongBookmark call.
-pub fn delete_song_bookmark(
+pub async fn delete_song_bookmark(
     session: &mut PandoraSession,
     bookmark_token: &str,
 ) -> Result<DeleteSongBookmarkResponse, Error> {
-    DeleteSongBookmark::from(&bookmark_token).response(session)
+    PandoraApiCall::new(DeleteSongBookmark::from(&bookmark_token))
+        .response(session)
+        .await
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraApiCall, PandoraApiRequest, PandoraSession};
 
 /// Retrieve the metadata for the associated advertisement token (usually provided by one of the other methods responsible for retrieving the playlist).
 ///
@@ -138,15 +138,18 @@ pub struct AudioStream {
 }
 
 /// Convenience function to do a basic getAdMetadata call.
-pub fn get_ad_metadata(
+pub async fn get_ad_metadata(
     session: &mut PandoraSession,
     ad_token: &str,
 ) -> Result<GetAdMetadataResponse, Error> {
-    GetAdMetadata::from(&ad_token)
-        .return_ad_tracking_tokens(false)
-        .support_audio_ads(false)
-        .include_banner_ad(false)
-        .response(session)
+    PandoraApiCall::new(
+        GetAdMetadata::from(&ad_token)
+            .return_ad_tracking_tokens(false)
+            .support_audio_ads(false)
+            .include_banner_ad(false),
+    )
+    .response(session)
+    .await
 }
 
 /// Register the tracking tokens associated with the advertisement. The theory is that this should be done just as the advertisement is about to play.
@@ -196,14 +199,14 @@ pub struct RegisterAdResponse {
 }
 
 /// Convenience function to do a basic registerAd call.
-pub fn register_ad(
+pub async fn register_ad(
     session: &mut PandoraSession,
     station_id: &str,
     ad_tracking_tokens: Vec<String>,
 ) -> Result<RegisterAdResponse, Error> {
     let mut request = RegisterAd::from(&station_id);
     request.ad_tracking_tokens = ad_tracking_tokens;
-    request.response(session)
+    PandoraApiCall::new(request).response(session).await
 }
 
 #[cfg(test)]

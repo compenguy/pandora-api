@@ -9,7 +9,9 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToPartnerTokens, ToUserTokens};
+use crate::json::{
+    PandoraApiCall, PandoraApiRequest, PandoraSession, ToPartnerTokens, ToUserTokens,
+};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -96,18 +98,6 @@ impl PartnerLogin {
     pub fn return_update_prompt_versions(self, value: bool) -> Self {
         self.and_boolean_option("returnUpdatePromptVersions", value)
     }
-
-    /// This is a wrapper around the `response` method from the
-    /// PandoraApiRequest trait that automatically merges the partner tokens
-    /// from the response back into the session.
-    pub fn merge_response(
-        &self,
-        session: &mut PandoraSession,
-    ) -> Result<PartnerLoginResponse, Error> {
-        let response = self.response(session)?;
-        session.update_partner_tokens(&response);
-        Ok(response)
-    }
 }
 
 /// syncTime is used to calculate the server time, see synctime. partnerId and authToken are required to proceed with user authentication.
@@ -175,17 +165,20 @@ impl ToPartnerTokens for PartnerLoginResponse {
 }
 
 /// Convenience function to do a basic partnerLogin call.
-pub fn partner_login(
+pub async fn partner_login(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
     device_model: &str,
 ) -> Result<PartnerLoginResponse, Error> {
-    PartnerLogin::new(username, password, device_model, None)
-        .include_urls(false)
-        .return_device_type(false)
-        .return_update_prompt_versions(false)
-        .merge_response(session)
+    PandoraApiCall::new(
+        PartnerLogin::new(username, password, device_model, None)
+            .include_urls(false)
+            .return_device_type(false)
+            .return_update_prompt_versions(false),
+    )
+    .merge_partner_response(session)
+    .await
 }
 
 /// This request *must* be sent over a TLS-encrypted link. It authenticates the Pandora user by sending his username, usually his email address, and password as well as the partnerAuthToken obtained by Partner login.
@@ -415,15 +408,6 @@ impl UserLogin {
     pub fn include_advertiser_attributes(self, value: bool) -> Self {
         self.and_boolean_option("includeAdvertiserAttributes", value)
     }
-
-    /// This is a wrapper around the `response` method from the
-    /// PandoraApiRequest trait that automatically merges the user tokens from
-    /// the response back into the session.
-    pub fn merge_response(&self, session: &mut PandoraSession) -> Result<UserLoginResponse, Error> {
-        let response = self.response(session)?;
-        session.update_user_tokens(&response);
-        Ok(response)
-    }
 }
 
 /// The returned userAuthToken is used to authenticate access to other API methods.
@@ -499,39 +483,42 @@ impl ToUserTokens for UserLoginResponse {
 }
 
 /// Convenience function to perform a basic user login.
-pub fn user_login(
+pub async fn user_login(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<UserLoginResponse, Error> {
-    UserLogin::new(username, password)
-        .return_genre_stations(false)
-        .return_capped(false)
-        .include_pandora_one_info(false)
-        .include_demographics(false)
-        .include_ad_attributes(false)
-        .return_station_list(false)
-        .include_station_art_url(false)
-        .include_station_seeds(false)
-        .include_shuffle_instead_of_quick_mix(false)
-        .return_collect_track_lifetime_stats(false)
-        .return_is_subscriber(false)
-        .xplatform_ad_capable(false)
-        .complimentary_sponsor_supported(false)
-        .include_subscription_expiration(false)
-        .return_has_used_trial(false)
-        .return_userstate(false)
-        .include_account_message(false)
-        .include_user_webname(false)
-        .include_listening_hours(false)
-        .include_facebook(false)
-        .include_twitter(false)
-        .include_daily_skip_limit(false)
-        .include_skip_delay(false)
-        .include_googleplay(false)
-        .include_show_user_recommendations(false)
-        .include_advertiser_attributes(false)
-        .merge_response(session)
+    PandoraApiCall::new(
+        UserLogin::new(username, password)
+            .return_genre_stations(false)
+            .return_capped(false)
+            .include_pandora_one_info(false)
+            .include_demographics(false)
+            .include_ad_attributes(false)
+            .return_station_list(false)
+            .include_station_art_url(false)
+            .include_station_seeds(false)
+            .include_shuffle_instead_of_quick_mix(false)
+            .return_collect_track_lifetime_stats(false)
+            .return_is_subscriber(false)
+            .xplatform_ad_capable(false)
+            .complimentary_sponsor_supported(false)
+            .include_subscription_expiration(false)
+            .return_has_used_trial(false)
+            .return_userstate(false)
+            .include_account_message(false)
+            .include_user_webname(false)
+            .include_listening_hours(false)
+            .include_facebook(false)
+            .include_twitter(false)
+            .include_daily_skip_limit(false)
+            .include_skip_delay(false)
+            .include_googleplay(false)
+            .include_show_user_recommendations(false)
+            .include_advertiser_attributes(false),
+    )
+    .merge_user_response(session)
+    .await
 }
 
 #[cfg(test)]

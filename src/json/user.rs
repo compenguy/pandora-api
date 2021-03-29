@@ -31,7 +31,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
+use crate::json::{PandoraApiCall, PandoraApiRequest, PandoraSession, Timestamp};
 
 /// Valid values for the gender is user account settings. The documentation
 /// suggests that the only valid values are "Male", "Female".
@@ -153,8 +153,10 @@ pub struct CanSubscribeResponse {
 }
 
 /// Convenience function to do a basic canSubscribe call.
-pub fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeResponse, Error> {
-    CanSubscribe::new().response(session)
+pub async fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeResponse, Error> {
+    PandoraApiCall::new(CanSubscribe::new())
+        .response(session)
+        .await
 }
 
 /// | Name   |  Type    Description |
@@ -234,6 +236,7 @@ impl ChangeSettings {
     }
 
     /// Whether the user profile is private or publicly visible. (Chaining call)
+    #[allow(clippy::wrong_self_convention)]
     pub fn is_profile_private(self, value: bool) -> Self {
         self.and_boolean_option("isProfilePrivate", value)
     }
@@ -259,11 +262,13 @@ impl ChangeSettings {
     }
 
     /// Whether the explicit content filter should be enabled. (Chaining call)
+    #[allow(clippy::wrong_self_convention)]
     pub fn is_explicit_content_filter_enabled(self, value: bool) -> Self {
         self.and_boolean_option("isExplicitContentFilterEnabled", value)
     }
 
     /// Whether the explicit content filter is protected by a PIN code. (Chaining call)
+    #[allow(clippy::wrong_self_convention)]
     pub fn is_explicit_content_filter_pin_protected(self, value: bool) -> Self {
         self.and_boolean_option("isExplicitContentFilterPINProtected", value)
     }
@@ -316,12 +321,14 @@ pub struct ChangeSettingsResponse {
 /// Convenience function to do a basic canSubscribe call. This function
 /// is basically useless for actually changing settings, but is useful
 /// to return the current values for user account settings.
-pub fn change_settings(
+pub async fn change_settings(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<ChangeSettingsResponse, Error> {
-    ChangeSettings::new(username, password).response(session)
+    PandoraApiCall::new(ChangeSettings::new(username, password))
+        .response(session)
+        .await
 }
 
 /// | Name    | Type  |  Description   |
@@ -429,7 +436,7 @@ pub struct CreateUserResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn create_user(
+pub async fn create_user(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
@@ -438,15 +445,16 @@ pub fn create_user(
     zip_code: &str,
     country_code: &str,
 ) -> Result<CreateUserResponse, Error> {
-    CreateUser::new(
+    PandoraApiCall::new(CreateUser::new(
         username,
         password,
         gender,
         birth_year,
         zip_code,
         country_code,
-    )
+    ))
     .response(session)
+    .await
 }
 
 /// **Unsupported!**
@@ -482,11 +490,13 @@ pub struct EmailPasswordResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn email_password(
+pub async fn email_password(
     session: &mut PandoraSession,
     username: &str,
 ) -> Result<EmailPasswordResponse, Error> {
-    EmailPassword::from(&username).response(session)
+    PandoraApiCall::new(EmailPassword::from(&username))
+        .response(session)
+        .await
 }
 
 /// **Unsupported!**
@@ -657,8 +667,10 @@ pub struct SongBookmark {
 }
 
 /// Convenience function to do a basic getBookmarks call.
-pub fn get_bookmarks(session: &mut PandoraSession) -> Result<GetBookmarksResponse, Error> {
-    GetBookmarks::new().response(session)
+pub async fn get_bookmarks(session: &mut PandoraSession) -> Result<GetBookmarksResponse, Error> {
+    PandoraApiCall::new(GetBookmarks::new())
+        .response(session)
+        .await
 }
 
 /// **Unsupported!**
@@ -714,8 +726,10 @@ pub struct GetSettingsResponse {
 }
 
 /// Convenience function to do a basic getSettings call.
-pub fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsResponse, Error> {
-    GetSettings::new().include_facebook(false).response(session)
+pub async fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsResponse, Error> {
+    PandoraApiCall::new(GetSettings::new().include_facebook(false))
+        .response(session)
+        .await
 }
 
 /// To check if the station list was modified by another client the checksum
@@ -979,15 +993,20 @@ pub struct Station {
 }
 
 /// Convenience function to do a basic getStationList call.
-pub fn get_station_list(session: &mut PandoraSession) -> Result<GetStationListResponse, Error> {
-    GetStationList::new()
-        .include_station_art_url(false)
-        .include_ad_attributes(false)
-        .include_station_seeds(false)
-        .include_shuffle_instead_of_quick_mix(false)
-        .include_recommendations(false)
-        .include_explanations(false)
-        .response(session)
+pub async fn get_station_list(
+    session: &mut PandoraSession,
+) -> Result<GetStationListResponse, Error> {
+    PandoraApiCall::new(
+        GetStationList::new()
+            .include_station_art_url(false)
+            .include_ad_attributes(false)
+            .include_station_seeds(false)
+            .include_shuffle_instead_of_quick_mix(false)
+            .include_recommendations(false)
+            .include_explanations(false),
+    )
+    .response(session)
+    .await
 }
 
 /// The request has no parameters.
@@ -1056,8 +1075,8 @@ pub struct GetUsageInfoResponse {
 }
 
 /// Convenience function to get account usage info.
-pub fn get_usage_info(session: &mut PandoraSession) -> Result<GetUsageInfoResponse, Error> {
-    GetUsageInfo {}.response(session)
+pub async fn get_usage_info(session: &mut PandoraSession) -> Result<GetUsageInfoResponse, Error> {
+    PandoraApiCall::new(GetUsageInfo {}).response(session).await
 }
 
 /// **Unsupported!**
@@ -1241,14 +1260,15 @@ pub struct ValidateUsernameResponse {
 }
 
 /// Convenience function to verify that a username is either valid or unique.
-pub fn validate_username(
+pub async fn validate_username(
     session: &mut PandoraSession,
     username: &str,
 ) -> Result<ValidateUsernameResponse, Error> {
-    ValidateUsername {
+    PandoraApiCall::new(ValidateUsername {
         username: username.to_string(),
-    }
+    })
     .response(session)
+    .await
 }
 
 #[cfg(test)]

@@ -23,9 +23,7 @@ pub mod user;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use reqwest;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 use crate::errors::Error;
 use crate::json::auth::{PartnerLogin, PartnerLoginResponse};
@@ -34,7 +32,7 @@ use crate::json::errors::{JsonError, JsonErrorKind};
 /// A builder to construct the properties of an http request to Pandora.
 #[derive(Debug, Clone)]
 pub struct PandoraSession {
-    client: reqwest::blocking::Client,
+    client: surf::Client,
     endpoint_url: url::Url,
     tokens: SessionTokens,
     json: serde_json::value::Value,
@@ -45,12 +43,12 @@ pub struct PandoraSession {
 impl PandoraSession {
     /// Construct a new PandoraSession.
     pub fn new<T: ToEncryptionTokens, E: ToEndpoint>(
-        client: Option<reqwest::blocking::Client>,
+        client: Option<surf::Client>,
         to_encryption_tokens: &T,
         to_endpoint: &E,
     ) -> Self {
         Self {
-            client: client.unwrap_or_else(reqwest::blocking::Client::new),
+            client: client.unwrap_or_else(surf::Client::new),
             endpoint_url: to_endpoint.to_endpoint_url(),
             tokens: SessionTokens::new(to_encryption_tokens),
             json: serde_json::value::Value::Object(serde_json::map::Map::new()),
@@ -73,7 +71,7 @@ impl PandoraSession {
     }
 
     /// Get a reference to the http client.
-    pub fn http_client(&self) -> &reqwest::blocking::Client {
+    pub fn http_client(&self) -> &surf::Client {
         &self.client
     }
 
@@ -180,9 +178,9 @@ impl PandoraSession {
         }
     }
 
-    /// Build a reqwest::blocking::Request, which can be inspected, modified, and executed with
-    /// reqwest::blocking::Client::execute().
-    pub fn build(&mut self) -> reqwest::blocking::RequestBuilder {
+    /// Build a surf::Request, which can be inspected, modified, and executed with
+    /// surf::Client::execute().
+    pub fn build(&mut self) -> surf::RequestBuilder {
         self.add_session_tokens_to_args();
         let mut url: url::Url = self.endpoint_url.clone();
         url.query_pairs_mut().extend_pairs(&self.args);
@@ -219,11 +217,11 @@ pub struct PandoraResponse<T> {
     pub code: Option<u32>,
 }
 
-impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>>
-    for PandoraResponse<T>
+impl<T: serde::de::DeserializeOwned> From<PandoraResponse<T>>
+    for std::result::Result<T, JsonError>
 {
-    fn into(self) -> std::result::Result<T, JsonError> {
-        match self {
+    fn from(resp: PandoraResponse<T>) -> Self {
+        match resp {
             PandoraResponse {
                 stat: PandoraStatus::Ok,
                 result: Some(result),
@@ -262,17 +260,11 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
     /// The type that the json response will be deserialized to.
     type Response: Debug + serde::de::DeserializeOwned;
     /// The Error type to be returned by fallible calls on this trait.
-    type Error: Debug + From<serde_json::error::Error> + From<reqwest::Error> + From<JsonError>;
+    type Error: Debug + From<serde_json::error::Error> + From<surf::Error> + From<JsonError>;
 
     /// Returns the name of the Pandora JSON API call in the form that it must
     /// appear when making that call.
     fn get_method(&self) -> String;
-
-    /// Returns the root json Value that should be serialized into the body of
-    /// the API call.
-    fn get_json(&self) -> std::result::Result<serde_json::value::Value, Self::Error> {
-        serde_json::to_value(self).map_err(Self::Error::from)
-    }
 
     /// Whether the json body of the API call is expected to be encrypted before
     /// transmission.
@@ -280,49 +272,46 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         false
     }
 
-    /// Generate an HTTP request that, when send() is called on it, will submit
-    /// the built request.
-    fn request(
-        &self,
-        session: &mut PandoraSession,
-    ) -> std::result::Result<reqwest::blocking::RequestBuilder, Self::Error> {
-        let mut tmp_session = session.clone();
-        tmp_session
-            .arg("method", &self.get_method())
-            .json(self.get_json()?);
-        if self.encrypt_request() {
-            tmp_session.encrypted();
+    /// Returns the root json Value that should be serialized into the body of
+    /// the API call.
+    fn get_json(&self) -> std::result::Result<serde_json::value::Value, Self::Error> {
+        serde_json::to_value(self).map_err(Self::Error::from)
+    }
+}
+
+/// Wrapper for types that implement PandoraApiRequest to simplify submitting the request and
+/// converting it to its response type.
+pub struct PandoraApiCall<C, R, E> {
+    api_call: C,
+    response: std::marker::PhantomData<R>,
+    error: std::marker::PhantomData<E>,
+}
+
+impl<C, R, E> PandoraApiCall<C, R, E>
+where
+    C: PandoraApiRequest + serde::ser::Serialize,
+    R: Debug + serde::de::DeserializeOwned,
+    E: Debug
+        + From<serde_json::error::Error>
+        + From<surf::Error>
+        + From<JsonError>
+        + From<<C as PandoraApiRequest>::Error>,
+{
+    /// Wrap a PandoraApiRequest in a new PandoraApiCall
+    pub fn new(api_call: C) -> Self {
+        Self {
+            api_call,
+            response: std::marker::PhantomData,
+            error: std::marker::PhantomData,
         }
-        Ok(tmp_session.build())
     }
 
-    /// Build the request, submit it, and extract the response content from the
-    /// body json, and deserialize it into the Self::Response type.
-    fn response(
-        &self,
-        session: &mut PandoraSession,
-    ) -> std::result::Result<Self::Response, Self::Error> {
-        let response = self.request(session)?.send().map_err(Self::Error::from)?;
-        response.error_for_status_ref().map_err(Self::Error::from)?;
+    /// Construct the API request, submit it, and convert the reply into the corresponding response
+    /// type
+    pub async fn response(&mut self, session: &mut PandoraSession) -> std::result::Result<R, E> {
+        let response_obj: PandoraResponse<R> = self.build_request(session)?.recv_json().await?;
+        let result: std::result::Result<R, JsonError> = response_obj.into();
 
-        let response_obj: PandoraResponse<Self::Response> = if cfg!(test) {
-            // Debugging support - output full response text before attempting
-            // deserialization
-            let response_body = response.text()?;
-            if cfg!(test) {
-                //println!("Full response: {:?}", response_body);
-            }
-            serde_json::from_slice(response_body.as_bytes())?
-        } else {
-            // Regular builds just grab the json directly.
-            response.json()?
-        };
-
-        if cfg!(test) {
-            //println!("Json response: {:?}", response_obj);
-        }
-
-        let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
         // Detect errors that indicate that our session tokens aren't valid, and clear them
         match result {
             Err(JsonError {
@@ -335,7 +324,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
                     kind: JsonErrorKind::InvalidAuthToken,
                     message,
                 })
-            },
+            }
             Err(JsonError {
                 kind: JsonErrorKind::InsufficientConnectivity,
                 message,
@@ -349,7 +338,71 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
             }
             res => res,
         }
-        .map_err(Self::Error::from)
+        .map_err(E::from)
+    }
+
+    /// Generate an HTTP request that, when send() is called on it, will submit
+    /// the built request.
+    fn build_request(
+        &self,
+        session: &PandoraSession,
+    ) -> std::result::Result<surf::RequestBuilder, E> {
+        let mut tmp_session = session.clone();
+        tmp_session
+            .arg("method", &self.api_call.get_method())
+            .json(self.api_call.get_json()?);
+        if self.api_call.encrypt_request() {
+            tmp_session.encrypted();
+        }
+        Ok(tmp_session.build())
+    }
+}
+
+impl<C, R, E> PandoraApiCall<C, R, E>
+where
+    C: PandoraApiRequest + serde::ser::Serialize,
+    R: ToPartnerTokens + Debug + serde::de::DeserializeOwned,
+    E: Debug
+        + From<serde_json::error::Error>
+        + From<surf::Error>
+        + From<JsonError>
+        + From<<C as PandoraApiRequest>::Error>,
+{
+    /// This is a wrapper around the `response` method from the
+    /// PandoraApiRequest trait that automatically merges the partner tokens
+    /// from the response back into the session.
+    pub async fn merge_partner_response(&mut self, session: &mut PandoraSession) -> Result<R, E> {
+        let response = self.response(session).await?;
+        session.update_partner_tokens(&response);
+        Ok(response)
+    }
+}
+
+impl<C, R, E> PandoraApiCall<C, R, E>
+where
+    C: PandoraApiRequest + serde::ser::Serialize,
+    R: ToUserTokens + Debug + serde::de::DeserializeOwned,
+    E: Debug
+        + From<serde_json::error::Error>
+        + From<surf::Error>
+        + From<JsonError>
+        + From<<C as PandoraApiRequest>::Error>,
+{
+    /// This is a wrapper around the `response` method from the
+    /// PandoraApiRequest trait that automatically merges the partner tokens
+    /// from the response back into the session.
+    pub async fn merge_user_response(&mut self, session: &mut PandoraSession) -> Result<R, E> {
+        let response = self.response(session).await?;
+        session.update_user_tokens(&response);
+        Ok(response)
+    }
+}
+
+impl<C, R, E> std::ops::Deref for PandoraApiCall<C, R, E> {
+    type Target = C;
+
+    fn deref(&self) -> &Self::Target {
+        &self.api_call
     }
 }
 
@@ -592,10 +645,10 @@ impl Partner {
 
     /// Convenience method for submitting the partner login request for this
     /// partner.
-    pub fn login(&self, session: &mut PandoraSession) -> Result<PartnerLoginResponse, Error> {
-        let response = self.to_partner_login().response(session)?;
-        session.update_partner_tokens(&response);
-        Ok(response)
+    pub async fn login(&self, session: &mut PandoraSession) -> Result<PartnerLoginResponse, Error> {
+        PandoraApiCall::new(self.to_partner_login())
+            .merge_partner_response(session)
+            .await
     }
 }
 
@@ -767,14 +820,14 @@ pub struct Timestamp {
     date: u8,
 }
 
-impl Into<chrono::DateTime<chrono::Utc>> for Timestamp {
-    fn into(self) -> chrono::DateTime<chrono::Utc> {
+impl From<Timestamp> for chrono::DateTime<chrono::Utc> {
+    fn from(ts: Timestamp) -> Self {
         // TODO: Figure out proper handling of timezoneOffset
         // e.g. is it signed? is the provided time Utc (and offset is applied
         // to get local) or is it local (and tells the offset used to determine
         // local)? is it the local time of the user, or the local time for the
         // system that generated the timestamp?
-        let naive_dt = chrono::NaiveDateTime::from_timestamp(self.time, 0);
+        let naive_dt = chrono::NaiveDateTime::from_timestamp(ts.time, 0);
         chrono::DateTime::<chrono::Utc>::from_utc(naive_dt, chrono::Utc)
     }
 }

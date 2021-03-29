@@ -8,7 +8,7 @@ use pandora_api_derive::PandoraRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraApiCall, PandoraApiRequest, PandoraSession};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -89,11 +89,13 @@ pub struct GetTrackResponse {
 }
 
 /// Convenience function to do a basic getTrack call.
-pub fn get_track(
+pub async fn get_track(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<GetTrackResponse, Error> {
-    GetTrack::from(&track_token).response(session)
+    PandoraApiCall::new(GetTrack::from(&track_token))
+        .response(session)
+        .await
 }
 
 /// **Unsupported!**
@@ -154,11 +156,17 @@ impl<TS: ToString> From<&TS> for Search {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn search(session: &mut PandoraSession, search_text: &str) -> Result<SearchResponse, Error> {
-    Search::from(&search_text)
-        .include_near_matches(false)
-        .include_genre_stations(false)
-        .response(session)
+pub async fn search(
+    session: &mut PandoraSession,
+    search_text: &str,
+) -> Result<SearchResponse, Error> {
+    PandoraApiCall::new(
+        Search::from(&search_text)
+            .include_near_matches(false)
+            .include_genre_stations(false),
+    )
+    .response(session)
+    .await
 }
 
 /// Matching songs, artists, and genre stations are returned in three separate lists.
