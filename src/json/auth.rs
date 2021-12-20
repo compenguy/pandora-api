@@ -100,11 +100,11 @@ impl PartnerLogin {
     /// This is a wrapper around the `response` method from the
     /// PandoraApiRequest trait that automatically merges the partner tokens
     /// from the response back into the session.
-    pub fn merge_response(
+    pub async fn merge_response(
         &self,
         session: &mut PandoraSession,
     ) -> Result<PartnerLoginResponse, Error> {
-        let response = self.response(session)?;
+        let response = self.response(session).await?;
         session.update_partner_tokens(&response);
         Ok(response)
     }
@@ -175,7 +175,7 @@ impl ToPartnerTokens for PartnerLoginResponse {
 }
 
 /// Convenience function to do a basic partnerLogin call.
-pub fn partner_login(
+pub async fn partner_login(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
@@ -186,6 +186,7 @@ pub fn partner_login(
         .return_device_type(false)
         .return_update_prompt_versions(false)
         .merge_response(session)
+        .await
 }
 
 /// This request *must* be sent over a TLS-encrypted link. It authenticates the Pandora user by sending his username, usually his email address, and password as well as the partnerAuthToken obtained by Partner login.
@@ -419,8 +420,11 @@ impl UserLogin {
     /// This is a wrapper around the `response` method from the
     /// PandoraApiRequest trait that automatically merges the user tokens from
     /// the response back into the session.
-    pub fn merge_response(&self, session: &mut PandoraSession) -> Result<UserLoginResponse, Error> {
-        let response = self.response(session)?;
+    pub async fn merge_response(
+        &self,
+        session: &mut PandoraSession,
+    ) -> Result<UserLoginResponse, Error> {
+        let response = self.response(session).await?;
         session.update_user_tokens(&response);
         Ok(response)
     }
@@ -499,7 +503,7 @@ impl ToUserTokens for UserLoginResponse {
 }
 
 /// Convenience function to perform a basic user login.
-pub fn user_login(
+pub async fn user_login(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
@@ -532,6 +536,7 @@ pub fn user_login(
         .include_show_user_recommendations(false)
         .include_advertiser_attributes(false)
         .merge_response(session)
+        .await
 }
 
 #[cfg(test)]
@@ -539,10 +544,10 @@ mod tests {
     use crate::json::{tests::session_login, Partner};
 
     // Tests both PartnerLogin and UserLogin
-    #[test]
-    fn auth_test() {
+    #[async_std::test]
+    async fn auth_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).expect("Failed initializing login session");
+        let session = session_login(&partner).await.expect("Failed initializing login session");
         println!("Session tokens: {:?}", session);
     }
 }

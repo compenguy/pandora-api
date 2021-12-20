@@ -153,8 +153,8 @@ pub struct CanSubscribeResponse {
 }
 
 /// Convenience function to do a basic canSubscribe call.
-pub fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeResponse, Error> {
-    CanSubscribe::new().response(session)
+pub async fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeResponse, Error> {
+    CanSubscribe::new().response(session).await
 }
 
 /// | Name   |  Type    Description |
@@ -316,12 +316,14 @@ pub struct ChangeSettingsResponse {
 /// Convenience function to do a basic canSubscribe call. This function
 /// is basically useless for actually changing settings, but is useful
 /// to return the current values for user account settings.
-pub fn change_settings(
+pub async fn change_settings(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
 ) -> Result<ChangeSettingsResponse, Error> {
-    ChangeSettings::new(username, password).response(session)
+    ChangeSettings::new(username, password)
+        .response(session)
+        .await
 }
 
 /// | Name    | Type  |  Description   |
@@ -429,7 +431,7 @@ pub struct CreateUserResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn create_user(
+pub async fn create_user(
     session: &mut PandoraSession,
     username: &str,
     password: &str,
@@ -447,6 +449,7 @@ pub fn create_user(
         country_code,
     )
     .response(session)
+    .await
 }
 
 /// **Unsupported!**
@@ -482,11 +485,11 @@ pub struct EmailPasswordResponse {
 }
 
 /// Convenience function to do a basic emailPassword call.
-pub fn email_password(
+pub async fn email_password(
     session: &mut PandoraSession,
     username: &str,
 ) -> Result<EmailPasswordResponse, Error> {
-    EmailPassword::from(&username).response(session)
+    EmailPassword::from(&username).response(session).await
 }
 
 /// **Unsupported!**
@@ -657,8 +660,8 @@ pub struct SongBookmark {
 }
 
 /// Convenience function to do a basic getBookmarks call.
-pub fn get_bookmarks(session: &mut PandoraSession) -> Result<GetBookmarksResponse, Error> {
-    GetBookmarks::new().response(session)
+pub async fn get_bookmarks(session: &mut PandoraSession) -> Result<GetBookmarksResponse, Error> {
+    GetBookmarks::new().response(session).await
 }
 
 /// **Unsupported!**
@@ -714,8 +717,11 @@ pub struct GetSettingsResponse {
 }
 
 /// Convenience function to do a basic getSettings call.
-pub fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsResponse, Error> {
-    GetSettings::new().include_facebook(false).response(session)
+pub async fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsResponse, Error> {
+    GetSettings::new()
+        .include_facebook(false)
+        .response(session)
+        .await
 }
 
 /// To check if the station list was modified by another client the checksum
@@ -979,7 +985,9 @@ pub struct Station {
 }
 
 /// Convenience function to do a basic getStationList call.
-pub fn get_station_list(session: &mut PandoraSession) -> Result<GetStationListResponse, Error> {
+pub async fn get_station_list(
+    session: &mut PandoraSession,
+) -> Result<GetStationListResponse, Error> {
     GetStationList::new()
         .include_station_art_url(false)
         .include_ad_attributes(false)
@@ -988,6 +996,7 @@ pub fn get_station_list(session: &mut PandoraSession) -> Result<GetStationListRe
         .include_recommendations(false)
         .include_explanations(false)
         .response(session)
+        .await
 }
 
 /// The request has no parameters.
@@ -1056,8 +1065,8 @@ pub struct GetUsageInfoResponse {
 }
 
 /// Convenience function to get account usage info.
-pub fn get_usage_info(session: &mut PandoraSession) -> Result<GetUsageInfoResponse, Error> {
-    GetUsageInfo {}.response(session)
+pub async fn get_usage_info(session: &mut PandoraSession) -> Result<GetUsageInfoResponse, Error> {
+    GetUsageInfo {}.response(session).await
 }
 
 /// **Unsupported!**
@@ -1241,7 +1250,7 @@ pub struct ValidateUsernameResponse {
 }
 
 /// Convenience function to verify that a username is either valid or unique.
-pub fn validate_username(
+pub async fn validate_username(
     session: &mut PandoraSession,
     username: &str,
 ) -> Result<ValidateUsernameResponse, Error> {
@@ -1249,6 +1258,7 @@ pub fn validate_username(
         username: username.to_string(),
     }
     .response(session)
+    .await
 }
 
 #[cfg(test)]
@@ -1257,44 +1267,44 @@ mod tests {
     use crate::errors;
     use crate::json::{errors::JsonErrorKind, tests::session_login, Partner};
 
-    #[test]
-    fn user_test() {
+    #[async_std::test]
+    async fn user_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        let _can_subscribe = can_subscribe(&mut session)
+        let _can_subscribe = can_subscribe(&mut session).await
             .expect("Failed submitting subscription information request");
 
         let _get_settings =
-            get_settings(&mut session).expect("Failed submitting settings info request");
+            get_settings(&mut session).await.expect("Failed submitting settings info request");
 
         let test_username_raw = include_str!("../../test_username.txt");
         let test_username = test_username_raw.trim();
         let test_password_raw = include_str!("../../test_password.txt");
         let test_password = test_password_raw.trim();
 
-        let _change_settings = change_settings(&mut session, &test_username, &test_password)
+        let _change_settings = change_settings(&mut session, &test_username, &test_password).await
             .expect("Failed submitting settings change request");
     }
 
     /* This test might trigger e-mail-based account recovery, which we probably
      * don't want to do automatically as a test.
-    #[test]
-    fn email_password_test() {
+    #[async_std::test]
+    async fn email_password_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        let email_password = email_password(&mut session).expect("Failed submitting settings change request");
+        let email_password = email_password(&mut session).await.expect("Failed submitting settings change request");
     }
     */
 
-    #[test]
+    #[async_std::test]
     #[should_panic(expected = "Invalid country code.")]
-    fn create_user_test() {
+    async fn create_user_test() {
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
-            .login(&mut session)
+            .login(&mut session).await
             .expect("Failed completing partner login");
         session.update_partner_tokens(&partner_login);
 
@@ -1321,7 +1331,7 @@ mod tests {
             test_birth,
             test_zip,
             test_cc,
-        ) {
+        ).await {
             Ok(cu) => println!("User successfully created? {:?}", cu),
             Err(errors::Error::PandoraJsonRequestError(e))
                 if e.kind() == JsonErrorKind::InvalidCountryCode =>

@@ -75,11 +75,13 @@ pub struct AddArtistBookmarkResponse {
 }
 
 /// Convenience function to do a basic addArtistBookmark call.
-pub fn add_artist_bookmark(
+pub async fn add_artist_bookmark(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<AddArtistBookmarkResponse, Error> {
-    AddArtistBookmark::from(&track_token).response(session)
+    AddArtistBookmark::from(&track_token)
+        .response(session)
+        .await
 }
 
 /// | Name | Type | Description |
@@ -159,11 +161,11 @@ pub struct AddSongBookmarkResponse {
 }
 
 /// Convenience function to do a basic addSongBookmark call.
-pub fn add_song_bookmark(
+pub async fn add_song_bookmark(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<AddSongBookmarkResponse, Error> {
-    AddSongBookmark::from(&track_token).response(session)
+    AddSongBookmark::from(&track_token).response(session).await
 }
 
 /// Bookmarks can be deleted
@@ -199,11 +201,13 @@ impl<TS: ToString> From<&TS> for DeleteArtistBookmark {
 pub struct DeleteArtistBookmarkResponse {}
 
 /// Convenience function to do a basic deleteArtistBookmark call.
-pub fn delete_artist_bookmark(
+pub async fn delete_artist_bookmark(
     session: &mut PandoraSession,
     bookmark_token: &str,
 ) -> Result<DeleteArtistBookmarkResponse, Error> {
-    DeleteArtistBookmark::from(&bookmark_token).response(session)
+    DeleteArtistBookmark::from(&bookmark_token)
+        .response(session)
+        .await
 }
 
 /// Bookmarks can be deleted
@@ -239,11 +243,13 @@ impl<TS: ToString> From<&TS> for DeleteSongBookmark {
 pub struct DeleteSongBookmarkResponse {}
 
 /// Convenience function to do a basic deleteSongBookmark call.
-pub fn delete_song_bookmark(
+pub async fn delete_song_bookmark(
     session: &mut PandoraSession,
     bookmark_token: &str,
 ) -> Result<DeleteSongBookmarkResponse, Error> {
-    DeleteSongBookmark::from(&bookmark_token).response(session)
+    DeleteSongBookmark::from(&bookmark_token)
+        .response(session)
+        .await
 }
 
 #[cfg(test)]
@@ -254,24 +260,24 @@ mod tests {
         Partner,
     };
 
-    #[test]
-    fn bookmark_test() {
+    #[async_std::test]
+    async fn bookmark_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        if let Some(station) = get_station_list(&mut session)
+        if let Some(station) = get_station_list(&mut session).await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
             .first()
         {
-            if let Some(track) = get_playlist(&mut session, &station.station_token)
+            if let Some(track) = get_playlist(&mut session, &station.station_token).await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_track())
                 .next()
             {
-                let artist_bookmark = add_artist_bookmark(&mut session, &track.track_token)
+                let artist_bookmark = add_artist_bookmark(&mut session, &track.track_token).await
                     .expect("Failed submitting artist bookmark creation request");
                 println!("Bookmark creation result: {:?}", artist_bookmark);
 
@@ -289,11 +295,11 @@ mod tests {
         }
 
         let user_bookmarks =
-            get_bookmarks(&mut session).expect("Failed submitting request for user bookmarks");
+            get_bookmarks(&mut session).await.expect("Failed submitting request for user bookmarks");
 
         for artist_bookmark in user_bookmarks.artists {
             let _del_bookmark =
-                delete_artist_bookmark(&mut session, &artist_bookmark.bookmark_token)
+                delete_artist_bookmark(&mut session, &artist_bookmark.bookmark_token).await
                     .expect("Failed submitting artist bookmark deletion request");
         }
 

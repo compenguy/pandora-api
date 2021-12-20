@@ -40,8 +40,10 @@ pub struct CheckLicensingResponse {
 }
 
 /// Convenience function to check geographic licensing restrictions.
-pub fn check_licensing(session: &mut PandoraSession) -> Result<CheckLicensingResponse, Error> {
-    CheckLicensing::default().response(session)
+pub async fn check_licensing(
+    session: &mut PandoraSession,
+) -> Result<CheckLicensingResponse, Error> {
+    CheckLicensing::default().response(session).await
 }
 
 /// **Unsupported!**
@@ -54,13 +56,13 @@ mod tests {
     use super::*;
     use crate::json::{tests::session_login, Partner};
 
-    #[test]
-    fn licensing_check_test() {
+    #[async_std::test]
+    async fn licensing_check_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
         let check_licensing_response =
-            check_licensing(&mut session).expect("Error making test.checkLicensing request");
+            check_licensing(&mut session).await.expect("Error making test.checkLicensing request");
         println!("test.checkLicensing() => {:?}", check_licensing_response);
     }
 }

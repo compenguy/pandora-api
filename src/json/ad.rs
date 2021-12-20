@@ -138,7 +138,7 @@ pub struct AudioStream {
 }
 
 /// Convenience function to do a basic getAdMetadata call.
-pub fn get_ad_metadata(
+pub async fn get_ad_metadata(
     session: &mut PandoraSession,
     ad_token: &str,
 ) -> Result<GetAdMetadataResponse, Error> {
@@ -147,6 +147,7 @@ pub fn get_ad_metadata(
         .support_audio_ads(false)
         .include_banner_ad(false)
         .response(session)
+        .await
 }
 
 /// Register the tracking tokens associated with the advertisement. The theory is that this should be done just as the advertisement is about to play.
@@ -196,14 +197,14 @@ pub struct RegisterAdResponse {
 }
 
 /// Convenience function to do a basic registerAd call.
-pub fn register_ad(
+pub async fn register_ad(
     session: &mut PandoraSession,
     station_id: &str,
     ad_tracking_tokens: Vec<String>,
 ) -> Result<RegisterAdResponse, Error> {
     let mut request = RegisterAd::from(&station_id);
     request.ad_tracking_tokens = ad_tracking_tokens;
-    request.response(session)
+    request.response(session).await
 }
 
 #[cfg(test)]
@@ -214,16 +215,16 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn ad_test() {
+    #[async_std::test]
+    async fn ad_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        for station in get_station_list(&mut session)
+        for station in get_station_list(&mut session).await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
-            for ad in get_playlist(&mut session, &station.station_token)
+            for ad in get_playlist(&mut session, &station.station_token).await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -234,6 +235,7 @@ mod tests {
                     .support_audio_ads(true)
                     .include_banner_ad(true)
                     .response(&mut session)
+                    .await
                     .expect("Failed getting ad metadata");
 
                 if !ad_metadata.ad_tracking_tokens.is_empty() {
@@ -241,7 +243,7 @@ mod tests {
                         &mut session,
                         &station.station_id,
                         ad_metadata.ad_tracking_tokens,
-                    )
+                    ).await
                     .expect("Failed registering ad");
                 }
             }

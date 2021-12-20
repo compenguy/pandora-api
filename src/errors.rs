@@ -19,7 +19,7 @@ pub enum Error {
     JsonSerializationError(#[from] serde_json::error::Error),
     /// Wraps reqwest errors
     #[error("HTTP I/O error: {0}")]
-    HttpIoError(#[from] reqwest::Error),
+    HttpIoError(surf::Error),
     /// Wraps another error type that describes API errors returned by the
     /// Pandora JSON API
     #[error("Pandora API error: {0}")]
@@ -32,3 +32,8 @@ pub enum Error {
     InvalidUserGender(String),
 }
 
+impl From<surf::Error> for Error {
+    fn from(err: surf::Error) -> Self {
+        Error::HttpIoError(err)
+    }
+}

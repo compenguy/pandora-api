@@ -9,9 +9,8 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use pandora_api_derive::PandoraRequest;
-use serde::{Deserialize, Serialize, de};
+use serde::{de, Deserialize, Serialize};
 use serde_json::value::Value;
-
 
 use crate::errors::Error;
 use crate::json::errors::JsonError;
@@ -20,8 +19,14 @@ use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
 /// Helper for deserializing comma separated lists as a Vec<String>
 fn de_comma_list<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
     match Value::deserialize(deserializer)? {
-        Value::String(s) => Ok(s.split(",").map(|s| s.trim().to_string()).filter(|s| s.is_empty()).collect()),
-        _ => Err(de::Error::custom("Unsupported field type. Expected 'String'.")),
+        Value::String(s) => Ok(s
+            .split(",")
+            .map(|s| s.trim().to_string())
+            .filter(|s| s.is_empty())
+            .collect()),
+        _ => Err(de::Error::custom(
+            "Unsupported field type. Expected 'String'.",
+        )),
     }
 }
 
@@ -141,13 +146,15 @@ pub struct AddFeedbackResponse {
 }
 
 /// Convenience function to do a basic addFeedback call.
-pub fn add_feedback(
+pub async fn add_feedback(
     session: &mut PandoraSession,
     station_token: &str,
     track_token: &str,
     is_positive: bool,
 ) -> Result<AddFeedbackResponse, Error> {
-    AddFeedback::new(station_token, track_token, is_positive).response(session)
+    AddFeedback::new(station_token, track_token, is_positive)
+        .response(session)
+        .await
 }
 
 /// music-search results can be used to add new seeds to an existing station.
@@ -214,12 +221,14 @@ pub struct AddMusicResponse {
 }
 
 /// Convenience function to do a basic addMusic call.
-pub fn add_music(
+pub async fn add_music(
     session: &mut PandoraSession,
     station_token: &str,
     music_token: &str,
 ) -> Result<AddMusicResponse, Error> {
-    AddMusic::new(station_token, music_token).response(session)
+    AddMusic::new(station_token, music_token)
+        .response(session)
+        .await
 }
 
 /// Stations can either be created with a musicToken obtained by Search or
@@ -299,27 +308,33 @@ pub struct CreateStationResponse {
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_track_song(
+pub async fn create_station_from_track_song(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
-    CreateStation::new_from_track_song(track_token).response(session)
+    CreateStation::new_from_track_song(track_token)
+        .response(session)
+        .await
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_artist(
+pub async fn create_station_from_artist(
     session: &mut PandoraSession,
     track_token: &str,
 ) -> Result<CreateStationResponse, Error> {
-    CreateStation::new_from_track_artist(track_token).response(session)
+    CreateStation::new_from_track_artist(track_token)
+        .response(session)
+        .await
 }
 
 /// Convenience function to do a basic createStation call.
-pub fn create_station_from_music_token(
+pub async fn create_station_from_music_token(
     session: &mut PandoraSession,
     music_token: &str,
 ) -> Result<CreateStationResponse, Error> {
-    CreateStation::new_from_music_token(music_token).response(session)
+    CreateStation::new_from_music_token(music_token)
+        .response(session)
+        .await
 }
 
 /// Feedback added by Rate track can be removed from the station.
@@ -359,11 +374,11 @@ pub struct DeleteFeedbackResponse {
 }
 
 /// Convenience function to do a basic deleteFeedback call.
-pub fn delete_feedback(
+pub async fn delete_feedback(
     session: &mut PandoraSession,
     feedback_id: &str,
 ) -> Result<DeleteFeedbackResponse, Error> {
-    DeleteFeedback::from(&feedback_id).response(session)
+    DeleteFeedback::from(&feedback_id).response(session).await
 }
 
 /// Seeds can be removed from a station, except for the last one.
@@ -404,11 +419,11 @@ pub struct DeleteMusicResponse {
 }
 
 /// Convenience function to do a basic deleteMusic call.
-pub fn delete_music(
+pub async fn delete_music(
     session: &mut PandoraSession,
     seed_id: &str,
 ) -> Result<DeleteMusicResponse, Error> {
-    DeleteMusic::from(&seed_id).response(session)
+    DeleteMusic::from(&seed_id).response(session).await
 }
 
 /// | Name   | Type  |  Description |
@@ -446,11 +461,11 @@ pub struct DeleteStationResponse {
 }
 
 /// Convenience function to do a basic deleteStation call.
-pub fn delete_station(
+pub async fn delete_station(
     session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<DeleteStationResponse, Error> {
-    DeleteStation::from(&station_token).response(session)
+    DeleteStation::from(&station_token).response(session).await
 }
 
 /// Check to see if the list of genre stations has changed.
@@ -506,12 +521,13 @@ pub struct GetGenreStationsChecksumResponse {
 }
 
 /// Convenience function to do a basic getGenreStationsChecksum call.
-pub fn get_genre_stations_checksum(
+pub async fn get_genre_stations_checksum(
     session: &mut PandoraSession,
 ) -> Result<GetGenreStationsChecksumResponse, Error> {
     GetGenreStationsChecksum::default()
         .include_genre_category_ad_url(false)
         .response(session)
+        .await
 }
 
 /// Pandora provides a list of predefined stations ("genre stations").
@@ -590,8 +606,10 @@ pub struct GenreStation {
 }
 
 /// Convenience function to do a basic getGenreStations call.
-pub fn get_genre_stations(session: &mut PandoraSession) -> Result<GetGenreStationsResponse, Error> {
-    GetGenreStations::default().response(session)
+pub async fn get_genre_stations(
+    session: &mut PandoraSession,
+) -> Result<GetGenreStationsResponse, Error> {
+    GetGenreStations::default().response(session).await
 }
 
 /// This method must be sent over a TLS-encrypted connection.
@@ -1083,7 +1101,7 @@ pub struct AudioStream {
 }
 
 /// Convenience function to do a basic getPlaylist call.
-pub fn get_playlist(
+pub async fn get_playlist(
     session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<GetPlaylistResponse, Error> {
@@ -1101,6 +1119,7 @@ pub fn get_playlist(
         .include_track_options(false)
         .audio_ad_pod_capable(false)
         .response(session)
+        .await
 }
 
 /// Extended station information includes seeds and feedback.
@@ -1472,13 +1491,14 @@ pub struct TrackFeedback {
 }
 
 /// Convenience function to do a basic getStation call.
-pub fn get_station(
+pub async fn get_station(
     session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<GetStationResponse, Error> {
     GetStation::from(&station_token)
         .include_extended_attributes(false)
         .response(session)
+        .await
 }
 
 /// **Unsupported!**
@@ -1520,12 +1540,14 @@ pub struct RenameStationResponse {
 }
 
 /// Convenience function to do a basic renameStation call.
-pub fn rename_station(
+pub async fn rename_station(
     session: &mut PandoraSession,
     station_token: &str,
     station_name: &str,
 ) -> Result<RenameStationResponse, Error> {
-    RenameStation::new(station_token, station_name).response(session)
+    RenameStation::new(station_token, station_name)
+        .response(session)
+        .await
 }
 
 /// Shares a station with the specified email addresses. that emails is a string array
@@ -1575,7 +1597,7 @@ pub struct ShareStationResponse {
 }
 
 /// Convenience function to do a basic shareStation call.
-pub fn share_station(
+pub async fn share_station(
     session: &mut PandoraSession,
     station_id: &str,
     station_token: &str,
@@ -1583,7 +1605,7 @@ pub fn share_station(
 ) -> Result<ShareStationResponse, Error> {
     let mut request = ShareStation::new(station_id, station_token);
     request.emails = emails;
-    request.response(session)
+    request.response(session).await
 }
 
 /// Stations created by other users are added as reference to the user’s
@@ -1620,11 +1642,13 @@ pub struct TransformSharedStationResponse {
 }
 
 /// Convenience function to do a basic transformSharedStation call.
-pub fn transform_shared_station(
+pub async fn transform_shared_station(
     session: &mut PandoraSession,
     station_token: &str,
 ) -> Result<TransformSharedStationResponse, Error> {
-    TransformSharedStation::from(&station_token).response(session)
+    TransformSharedStation::from(&station_token)
+        .response(session)
+        .await
 }
 
 #[cfg(test)]
@@ -1637,18 +1661,18 @@ mod tests {
     };
 
     // TODO: share_station, transform_shared_station,
-    #[test]
-    fn station_ops_test() {
+    #[async_std::test]
+    async fn station_ops_test() {
         // TODO: ensure that the station we intend to create didn't get leaked
         // by a previous, failed test execution, look for stations named either
         // "INXS Radio" or "XSNI Radio"
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
         let artist_search =
-            search(&mut session, "INXS").expect("Failed completing artist search request");
+            search(&mut session, "INXS").await.expect("Failed completing artist search request");
 
-        let additional_artist_search = search(&mut session, "Panic! At the Disco")
+        let additional_artist_search = search(&mut session, "Panic! At the Disco").await
             .expect("Failed completing artist search request");
 
         if let Some(ArtistMatch { music_token, .. }) = artist_search
@@ -1657,11 +1681,11 @@ mod tests {
             .filter(|am| am.score == 100)
             .next()
         {
-            let created_station = create_station_from_music_token(&mut session, &music_token)
+            let created_station = create_station_from_music_token(&mut session, &music_token).await
                 .expect("Failed creating station from search result");
 
             let _renamed_station =
-                rename_station(&mut session, &created_station.station_token, "XSNI Radio")
+                rename_station(&mut session, &created_station.station_token, "XSNI Radio").await
                     .expect("Failed renaming station");
 
             if let Some(ArtistMatch { music_token, .. }) = additional_artist_search
@@ -1671,39 +1695,39 @@ mod tests {
                 .next()
             {
                 let added_music =
-                    add_music(&mut session, &created_station.station_token, music_token)
+                    add_music(&mut session, &created_station.station_token, music_token).await
                         .expect("Failed adding music to station");
 
-                let _del_music = delete_music(&mut session, &added_music.seed_id)
+                let _del_music = delete_music(&mut session, &added_music.seed_id).await
                     .expect("Failed deleting music from station");
             }
 
-            let _del_station = delete_station(&mut session, &created_station.station_token)
+            let _del_station = delete_station(&mut session, &created_station.station_token).await
                 .expect("Failed deleting station");
         }
     }
 
     /* This test is very demanding on the server, so we disable it until we want
      * to retest.
-    #[test]
-    fn genre_stations_test() {
+    #[async_std::test]
+    async fn genre_stations_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        let genre_stations = get_genre_stations(&mut session)
+        let genre_stations = get_genre_stations(&mut session).await
             .expect("Failed getting genre stations");
 
-        let genre_stations_checksum = get_genre_stations_checksum(&mut session)
+        let genre_stations_checksum = get_genre_stations_checksum(&mut session).await
             .expect("Failed getting genre stations checksum");
     }
     */
 
-    #[test]
-    fn station_feedback_test() {
+    #[async_std::test]
+    async fn station_feedback_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).expect("Failed initializing login session");
+        let mut session = session_login(&partner).await.expect("Failed initializing login session");
 
-        for station in get_station_list(&mut session)
+        for station in get_station_list(&mut session).await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
@@ -1712,7 +1736,7 @@ mod tests {
             // ratings during this test.  This also exercises get_station.
             let station = GetStation::from(&station.station_token)
                 .include_extended_attributes(true)
-                .response(&mut session)
+                .response(&mut session).await
                 .expect("Failed getting station attributes");
 
             let mut protected_tracks: HashSet<String> = HashSet::new();
@@ -1731,7 +1755,7 @@ mod tests {
                     .map(|tf| tf.song_name.clone()),
             );
 
-            for track in get_playlist(&mut session, &station.station_token)
+            for track in get_playlist(&mut session, &station.station_token).await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -1747,10 +1771,10 @@ mod tests {
                     &station.station_token,
                     &track.track_token,
                     true,
-                )
+                ).await
                 .expect("Failed adding positive feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id).await
                     .expect("Failed deleting positive feedback from track");
                 // Thumbs-down track
                 let feedback = add_feedback(
@@ -1758,10 +1782,10 @@ mod tests {
                     &station.station_token,
                     &track.track_token,
                     false,
-                )
+                ).await
                 .expect("Failed adding negative feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id).await
                     .expect("Failed deleting negative feedback from track");
 
                 // Finished test, stop looping through
