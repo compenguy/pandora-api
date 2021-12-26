@@ -95,21 +95,26 @@ mod tests {
     #[async_std::test]
     async fn explain_track_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        if let Some(station) = get_station_list(&mut session).await
+        if let Some(station) = get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
             .first()
         {
-            if let Some(track) = get_playlist(&mut session, &station.station_token).await
+            if let Some(track) = get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_track())
                 .next()
             {
-                let explain_track = explain_track(&mut session, &track.track_token).await
+                let explain_track = explain_track(&mut session, &track.track_token)
+                    .await
                     .expect("Failed submitting track explanation request");
                 println!("Track explanation: {:?}", explain_track);
             } else {

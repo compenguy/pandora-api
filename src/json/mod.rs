@@ -219,11 +219,9 @@ pub struct PandoraResponse<T> {
     pub code: Option<u32>,
 }
 
-impl<T: serde::de::DeserializeOwned> Into<std::result::Result<T, JsonError>>
-    for PandoraResponse<T>
-{
-    fn into(self) -> std::result::Result<T, JsonError> {
-        match self {
+impl<T: serde::de::DeserializeOwned> From<PandoraResponse<T>> for std::result::Result<T, JsonError> {
+    fn from(pandora_resp: PandoraResponse<T>) -> Self {
+        match pandora_resp {
             PandoraResponse {
                 stat: PandoraStatus::Ok,
                 result: Some(result),
@@ -771,14 +769,14 @@ pub struct Timestamp {
     date: u8,
 }
 
-impl Into<chrono::DateTime<chrono::Utc>> for Timestamp {
-    fn into(self) -> chrono::DateTime<chrono::Utc> {
+impl From<Timestamp> for chrono::DateTime<chrono::Utc> {
+    fn from(ts: Timestamp) -> chrono::DateTime<chrono::Utc> {
         // TODO: Figure out proper handling of timezoneOffset
         // e.g. is it signed? is the provided time Utc (and offset is applied
         // to get local) or is it local (and tells the offset used to determine
         // local)? is it the local time of the user, or the local time for the
         // system that generated the timestamp?
-        let naive_dt = chrono::NaiveDateTime::from_timestamp(self.time, 0);
+        let naive_dt = chrono::NaiveDateTime::from_timestamp(ts.time, 0);
         chrono::DateTime::<chrono::Utc>::from_utc(naive_dt, chrono::Utc)
     }
 }
@@ -814,7 +812,8 @@ mod tests {
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
-            .login(&mut session).await
+            .login(&mut session)
+            .await
             .expect("Failed while performing partner login");
         session.update_partner_tokens(&partner_login);
     }

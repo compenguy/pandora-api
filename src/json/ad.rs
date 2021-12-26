@@ -218,13 +218,17 @@ mod tests {
     #[async_std::test]
     async fn ad_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        for station in get_station_list(&mut session).await
+        for station in get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
-            for ad in get_playlist(&mut session, &station.station_token).await
+            for ad in get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -243,7 +247,8 @@ mod tests {
                         &mut session,
                         &station.station_id,
                         ad_metadata.ad_tracking_tokens,
-                    ).await
+                    )
+                    .await
                     .expect("Failed registering ad");
                 }
             }

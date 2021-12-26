@@ -275,26 +275,34 @@ mod tests {
     #[async_std::test]
     async fn search_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        let _search_response =
-            search(&mut session, "INXS").await.expect("Failed completing search request");
+        let _search_response = search(&mut session, "INXS")
+            .await
+            .expect("Failed completing search request");
         let _search_response: SearchResponse = Search::from(&"Alternative")
             .include_genre_stations(true)
-            .response(&mut session).await
+            .response(&mut session)
+            .await
             .expect("Failed completing search request");
     }
 
     #[async_std::test]
     async fn get_track_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        for station in get_station_list(&mut session).await
+        for station in get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
-            for track in get_playlist(&mut session, &station.station_token).await
+            for track in get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -303,7 +311,8 @@ mod tests {
                 if let Some(serde_json::value::Value::String(music_id)) =
                     track.optional.get("musicId")
                 {
-                    let _response = get_track(&mut session, &music_id).await
+                    let _response = get_track(&mut session, &music_id)
+                        .await
                         .expect("Failed getting track information");
                 }
             }

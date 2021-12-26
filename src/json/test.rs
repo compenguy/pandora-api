@@ -59,10 +59,13 @@ mod tests {
     #[async_std::test]
     async fn licensing_check_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        let check_licensing_response =
-            check_licensing(&mut session).await.expect("Error making test.checkLicensing request");
+        let check_licensing_response = check_licensing(&mut session)
+            .await
+            .expect("Error making test.checkLicensing request");
         println!("test.checkLicensing() => {:?}", check_licensing_response);
     }
 }

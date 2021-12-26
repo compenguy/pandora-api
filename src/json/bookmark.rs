@@ -263,21 +263,26 @@ mod tests {
     #[async_std::test]
     async fn bookmark_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        if let Some(station) = get_station_list(&mut session).await
+        if let Some(station) = get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
             .first()
         {
-            if let Some(track) = get_playlist(&mut session, &station.station_token).await
+            if let Some(track) = get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
                 .flat_map(|p| p.get_track())
                 .next()
             {
-                let artist_bookmark = add_artist_bookmark(&mut session, &track.track_token).await
+                let artist_bookmark = add_artist_bookmark(&mut session, &track.track_token)
+                    .await
                     .expect("Failed submitting artist bookmark creation request");
                 println!("Bookmark creation result: {:?}", artist_bookmark);
 
@@ -294,12 +299,14 @@ mod tests {
             panic!("Station list request returned no results, so no bookmarkable content.");
         }
 
-        let user_bookmarks =
-            get_bookmarks(&mut session).await.expect("Failed submitting request for user bookmarks");
+        let user_bookmarks = get_bookmarks(&mut session)
+            .await
+            .expect("Failed submitting request for user bookmarks");
 
         for artist_bookmark in user_bookmarks.artists {
             let _del_bookmark =
-                delete_artist_bookmark(&mut session, &artist_bookmark.bookmark_token).await
+                delete_artist_bookmark(&mut session, &artist_bookmark.bookmark_token)
+                    .await
                     .expect("Failed submitting artist bookmark deletion request");
         }
 

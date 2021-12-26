@@ -20,7 +20,7 @@ use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
 fn de_comma_list<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
     match Value::deserialize(deserializer)? {
         Value::String(s) => Ok(s
-            .split(",")
+            .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| s.is_empty())
             .collect()),
@@ -682,7 +682,7 @@ impl GetPlaylist {
                     s.push_str(value);
                 }
             })
-            .or_insert(serde_json::value::Value::from(value));
+            .or_insert_with(|| serde_json::value::Value::from(value));
         self
     }
 
@@ -994,18 +994,12 @@ pub enum PlaylistEntry {
 impl PlaylistEntry {
     /// Returns whether the playlist entry is an ad
     pub fn is_ad(&self) -> bool {
-        match self {
-            PlaylistEntry::PlaylistAd(_) => true,
-            _ => false,
-        }
+        matches!(self, PlaylistEntry::PlaylistAd(_))
     }
 
     /// Returns whether the playlist entry is a track
     pub fn is_track(&self) -> bool {
-        match self {
-            PlaylistEntry::PlaylistTrack(_) => true,
-            _ => false,
-        }
+        matches!(self, PlaylistEntry::PlaylistTrack(_))
     }
 
     /// Returns the PlaylistAd object for this entry, if any
@@ -1667,12 +1661,16 @@ mod tests {
         // by a previous, failed test execution, look for stations named either
         // "INXS Radio" or "XSNI Radio"
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        let artist_search =
-            search(&mut session, "INXS").await.expect("Failed completing artist search request");
+        let artist_search = search(&mut session, "INXS")
+            .await
+            .expect("Failed completing artist search request");
 
-        let additional_artist_search = search(&mut session, "Panic! At the Disco").await
+        let additional_artist_search = search(&mut session, "Panic! At the Disco")
+            .await
             .expect("Failed completing artist search request");
 
         if let Some(ArtistMatch { music_token, .. }) = artist_search
@@ -1681,11 +1679,13 @@ mod tests {
             .filter(|am| am.score == 100)
             .next()
         {
-            let created_station = create_station_from_music_token(&mut session, &music_token).await
+            let created_station = create_station_from_music_token(&mut session, &music_token)
+                .await
                 .expect("Failed creating station from search result");
 
             let _renamed_station =
-                rename_station(&mut session, &created_station.station_token, "XSNI Radio").await
+                rename_station(&mut session, &created_station.station_token, "XSNI Radio")
+                    .await
                     .expect("Failed renaming station");
 
             if let Some(ArtistMatch { music_token, .. }) = additional_artist_search
@@ -1695,14 +1695,17 @@ mod tests {
                 .next()
             {
                 let added_music =
-                    add_music(&mut session, &created_station.station_token, music_token).await
+                    add_music(&mut session, &created_station.station_token, music_token)
+                        .await
                         .expect("Failed adding music to station");
 
-                let _del_music = delete_music(&mut session, &added_music.seed_id).await
+                let _del_music = delete_music(&mut session, &added_music.seed_id)
+                    .await
                     .expect("Failed deleting music from station");
             }
 
-            let _del_station = delete_station(&mut session, &created_station.station_token).await
+            let _del_station = delete_station(&mut session, &created_station.station_token)
+                .await
                 .expect("Failed deleting station");
         }
     }
@@ -1725,9 +1728,12 @@ mod tests {
     #[async_std::test]
     async fn station_feedback_test() {
         let partner = Partner::default();
-        let mut session = session_login(&partner).await.expect("Failed initializing login session");
+        let mut session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
 
-        for station in get_station_list(&mut session).await
+        for station in get_station_list(&mut session)
+            .await
             .expect("Failed getting station list to look up a track to bookmark")
             .stations
         {
@@ -1736,7 +1742,8 @@ mod tests {
             // ratings during this test.  This also exercises get_station.
             let station = GetStation::from(&station.station_token)
                 .include_extended_attributes(true)
-                .response(&mut session).await
+                .response(&mut session)
+                .await
                 .expect("Failed getting station attributes");
 
             let mut protected_tracks: HashSet<String> = HashSet::new();
@@ -1755,7 +1762,8 @@ mod tests {
                     .map(|tf| tf.song_name.clone()),
             );
 
-            for track in get_playlist(&mut session, &station.station_token).await
+            for track in get_playlist(&mut session, &station.station_token)
+                .await
                 .expect("Failed completing request for playlist")
                 .items
                 .iter()
@@ -1771,10 +1779,12 @@ mod tests {
                     &station.station_token,
                     &track.track_token,
                     true,
-                ).await
+                )
+                .await
                 .expect("Failed adding positive feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id).await
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
+                    .await
                     .expect("Failed deleting positive feedback from track");
                 // Thumbs-down track
                 let feedback = add_feedback(
@@ -1782,10 +1792,12 @@ mod tests {
                     &station.station_token,
                     &track.track_token,
                     false,
-                ).await
+                )
+                .await
                 .expect("Failed adding negative feedback to track");
                 // And delete
-                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id).await
+                let _del_feedback = delete_feedback(&mut session, &feedback.feedback_id)
+                    .await
                     .expect("Failed deleting negative feedback from track");
 
                 // Finished test, stop looping through

@@ -547,7 +547,9 @@ mod tests {
     #[async_std::test]
     async fn auth_test() {
         let partner = Partner::default();
-        let session = session_login(&partner).await.expect("Failed initializing login session");
+        let session = session_login(&partner)
+            .await
+            .expect("Failed initializing login session");
         println!("Session tokens: {:?}", session);
     }
 }
