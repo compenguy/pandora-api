@@ -260,7 +260,7 @@ mod tests {
         Partner,
     };
 
-    #[async_std::test]
+    #[tokio::test]
     async fn bookmark_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)

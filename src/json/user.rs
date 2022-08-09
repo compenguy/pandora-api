@@ -1267,7 +1267,7 @@ mod tests {
     use crate::errors;
     use crate::json::{errors::JsonErrorKind, tests::session_login, Partner};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn user_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)
@@ -1294,7 +1294,7 @@ mod tests {
 
     /* This test might trigger e-mail-based account recovery, which we probably
      * don't want to do automatically as a test.
-    #[async_std::test]
+    #[tokio::test]
     async fn email_password_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner).await.expect("Failed initializing login session");
@@ -1303,7 +1303,7 @@ mod tests {
     }
     */
 
-    #[async_std::test]
+    #[tokio::test]
     #[should_panic(expected = "Invalid country code.")]
     async fn create_user_test() {
         let partner = Partner::default();

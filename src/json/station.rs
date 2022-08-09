@@ -1655,7 +1655,7 @@ mod tests {
     };
 
     // TODO: share_station, transform_shared_station,
-    #[async_std::test]
+    #[tokio::test]
     async fn station_ops_test() {
         // TODO: ensure that the station we intend to create didn't get leaked
         // by a previous, failed test execution, look for stations named either
@@ -1712,7 +1712,7 @@ mod tests {
 
     /* This test is very demanding on the server, so we disable it until we want
      * to retest.
-    #[async_std::test]
+    #[tokio::test]
     async fn genre_stations_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner).await.expect("Failed initializing login session");
@@ -1725,7 +1725,7 @@ mod tests {
     }
     */
 
-    #[async_std::test]
+    #[tokio::test]
     async fn station_feedback_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)

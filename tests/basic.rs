@@ -1,6 +1,6 @@
 use pandora_api::json::{auth, test, user, Partner};
 
-#[async_std::test]
+#[tokio::test]
 async fn basic_session_test() {
     let partner = Partner::default();
     let mut session = partner.init_session();

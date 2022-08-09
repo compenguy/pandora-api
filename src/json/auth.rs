@@ -544,7 +544,7 @@ mod tests {
     use crate::json::{tests::session_login, Partner};
 
     // Tests both PartnerLogin and UserLogin
-    #[async_std::test]
+    #[tokio::test]
     async fn auth_test() {
         let partner = Partner::default();
         let session = session_login(&partner)

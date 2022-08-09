@@ -92,7 +92,7 @@ mod tests {
         station::get_playlist, tests::session_login, user::get_station_list, Partner,
     };
 
-    #[async_std::test]
+    #[tokio::test]
     async fn explain_track_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)

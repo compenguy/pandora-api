@@ -25,7 +25,6 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 use serde_json;
-use surf;
 
 use crate::errors::Error;
 use crate::json::auth::{PartnerLogin, PartnerLoginResponse};
@@ -34,7 +33,7 @@ use crate::json::errors::{JsonError, JsonErrorKind};
 /// A builder to construct the properties of an http request to Pandora.
 #[derive(Debug, Clone)]
 pub struct PandoraSession {
-    client: surf::Client,
+    client: reqwest::Client,
     endpoint_url: url::Url,
     tokens: SessionTokens,
     json: serde_json::value::Value,
@@ -45,12 +44,12 @@ pub struct PandoraSession {
 impl PandoraSession {
     /// Construct a new PandoraSession.
     pub fn new<T: ToEncryptionTokens, E: ToEndpoint>(
-        client: Option<surf::Client>,
+        client: Option<reqwest::Client>,
         to_encryption_tokens: &T,
         to_endpoint: &E,
     ) -> Self {
         Self {
-            client: client.unwrap_or_else(surf::Client::new),
+            client: client.unwrap_or_else(reqwest::Client::new),
             endpoint_url: to_endpoint.to_endpoint_url(),
             tokens: SessionTokens::new(to_encryption_tokens),
             json: serde_json::value::Value::Object(serde_json::map::Map::new()),
@@ -73,7 +72,7 @@ impl PandoraSession {
     }
 
     /// Get a reference to the http client.
-    pub fn http_client(&self) -> &surf::Client {
+    pub fn http_client(&self) -> &reqwest::Client {
         &self.client
     }
 
@@ -180,9 +179,9 @@ impl PandoraSession {
         }
     }
 
-    /// Build a surf::Request, which can be inspected, modified, and executed with
-    /// surf::Client::execute().
-    pub fn build(&mut self) -> surf::RequestBuilder {
+    /// Build a reqwest::Request, which can be inspected, modified, and executed with
+    /// reqwest::Client::execute().
+    pub fn build(&mut self) -> reqwest::RequestBuilder {
         self.add_session_tokens_to_args();
         let mut url: url::Url = self.endpoint_url.clone();
         url.query_pairs_mut().extend_pairs(&self.args);
@@ -219,7 +218,9 @@ pub struct PandoraResponse<T> {
     pub code: Option<u32>,
 }
 
-impl<T: serde::de::DeserializeOwned> From<PandoraResponse<T>> for std::result::Result<T, JsonError> {
+impl<T: serde::de::DeserializeOwned> From<PandoraResponse<T>>
+    for std::result::Result<T, JsonError>
+{
     fn from(pandora_resp: PandoraResponse<T>) -> Self {
         match pandora_resp {
             PandoraResponse {
@@ -261,7 +262,11 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
     /// The type that the json response will be deserialized to.
     type Response: Debug + serde::de::DeserializeOwned;
     /// The Error type to be returned by fallible calls on this trait.
-    type Error: Debug + From<serde_json::error::Error> + From<surf::Error> + From<JsonError> + Send;
+    type Error: Debug
+        + From<serde_json::error::Error>
+        + From<reqwest::Error>
+        + From<JsonError>
+        + Send;
 
     /// Returns the name of the Pandora JSON API call in the form that it must
     /// appear when making that call.
@@ -284,7 +289,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
     fn request(
         &self,
         session: &mut PandoraSession,
-    ) -> std::result::Result<surf::RequestBuilder, Self::Error> {
+    ) -> std::result::Result<reqwest::RequestBuilder, Self::Error> {
         let mut tmp_session = session.clone();
         tmp_session
             .arg("method", &self.get_method())
@@ -301,7 +306,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         &self,
         session: &mut PandoraSession,
     ) -> std::result::Result<Self::Response, Self::Error> {
-        let mut response = self
+        let response = self
             .request(session)?
             .send()
             .await
@@ -310,14 +315,14 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         let response_obj: PandoraResponse<Self::Response> = if cfg!(test) {
             // Debugging support - output full response text before attempting
             // deserialization
-            let response_body = response.body_string().await?;
+            let response_body = response.text().await?;
             if cfg!(test) {
                 //println!("Full response: {:?}", response_body);
             }
             serde_json::from_slice(response_body.as_bytes())?
         } else {
             // Regular builds just grab the json directly.
-            response.body_json().await?
+            response.json().await?
         };
 
         if cfg!(test) {
@@ -750,23 +755,23 @@ impl<T: ToEncryptionTokens> From<&T> for SessionTokens {
 #[serde(rename_all = "camelCase")]
 pub struct Timestamp {
     /// The offset from UTC in minutes
-    timezone_offset: u32,
+    _timezone_offset: u32,
     /// Unix epoch time for the timezone offset
     time: i64,
     /// Year, adjusted for timezone offset
-    year: u32,
+    _year: u32,
     /// Month, adjusted for timezone offset
-    month: u8,
+    _month: u8,
     /// Day of month, adjusted for timezone offset
-    day: u8,
+    _day: u8,
     /// Hour, adjusted for timezone offset
-    hours: u8,
+    _hours: u8,
     /// Minute, adjusted for timezone offset
-    minutes: u8,
+    _minutes: u8,
     /// Seconds, adjusted for timezone offset
-    seconds: u8,
+    _seconds: u8,
     /// Unknown
-    date: u8,
+    _date: u8,
 }
 
 impl From<Timestamp> for chrono::DateTime<chrono::Utc> {
@@ -807,7 +812,7 @@ mod tests {
         Ok(session)
     }
 
-    #[async_std::test]
+    #[tokio::test]
     async fn partner_test() {
         let partner = Partner::default();
         let mut session = partner.init_session();

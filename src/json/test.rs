@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use crate::json::{tests::session_login, Partner};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn licensing_check_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)

@@ -215,7 +215,7 @@ mod tests {
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn ad_test() {
         let partner = Partner::default();
         let mut session = session_login(&partner)
