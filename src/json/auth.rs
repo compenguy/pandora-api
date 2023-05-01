@@ -5,11 +5,11 @@ Authentication/authorization support messages.
 
 use std::collections::HashMap;
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, ToPartnerTokens, ToUserTokens};
+use crate::json::{PandoraJsonApiRequest, PandoraSession, ToPartnerTokens, ToUserTokens};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -39,7 +39,7 @@ pub struct PartnerAdminLoginUnsupported {}
 ///     "version": "5"
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct PartnerLogin {
     /// The partner login name (not the account-holder's username)
@@ -98,7 +98,7 @@ impl PartnerLogin {
     }
 
     /// This is a wrapper around the `response` method from the
-    /// PandoraApiRequest trait that automatically merges the partner tokens
+    /// PandoraJsonApiRequest trait that automatically merges the partner tokens
     /// from the response back into the session.
     pub async fn merge_response(
         &self,
@@ -240,7 +240,7 @@ pub async fn partner_login(
 ///    "syncTime": 1335777573
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct UserLogin {
@@ -418,7 +418,7 @@ impl UserLogin {
     }
 
     /// This is a wrapper around the `response` method from the
-    /// PandoraApiRequest trait that automatically merges the user tokens from
+    /// PandoraJsonApiRequest trait that automatically merges the user tokens from
     /// the response back into the session.
     pub async fn merge_response(
         &self,
@@ -546,10 +546,17 @@ mod tests {
     // Tests both PartnerLogin and UserLogin
     #[tokio::test]
     async fn auth_test() {
+        /*
+        flexi_logger::Logger::try_with_str("info, pandora_api=debug")
+            .expect("Failed to set logging configuration")
+            .start()
+            .expect("Failed to start logger");
+        */
+
         let partner = Partner::default();
         let session = session_login(&partner)
             .await
             .expect("Failed initializing login session");
-        println!("Session tokens: {:?}", session);
+        log::debug!("Session tokens: {:?}", session);
     }
 }

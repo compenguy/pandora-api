@@ -4,11 +4,11 @@ Music support methods.
 // SPDX-License-Identifier: MIT AND WTFPL
 use std::collections::HashMap;
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraJsonApiRequest, PandoraSession};
 
 /// **Unsupported!**
 /// Undocumented method
@@ -20,7 +20,7 @@ pub struct GetSearchRecommendationsUnsupported {}
 /// | musicId | String | as returned from a playlist that has not yet expired |
 ///
 /// [music.getTrack()](https://github.com/pithos/pithos/issues/351)
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetTrack {
@@ -114,7 +114,7 @@ pub struct PublishSongShareUnsupported {}
 ///     "syncTime": 1335869287
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct Search {

@@ -20,9 +20,15 @@ pub enum Error {
     /// Wraps reqwest errors
     #[error("HTTP I/O error: {0}")]
     HttpIoError(#[from] reqwest::Error),
+    /// Wraps url parse errors
+    #[error("HTTP URL parse error: {0}")]
+    HttpUrlParseError(#[from] url::ParseError),
+    /// Wraps a bytes-to-utf8 conversion error
+    #[error("String contained invalid bytes: {0}")]
+    StringConversionError(#[from] std::str::Utf8Error),
     /// Wraps another error type that describes API errors returned by the
     /// Pandora JSON API
-    #[error("Pandora API error: {0}")]
+    #[error("Pandora JSON API error: {0}")]
     PandoraJsonRequestError(#[from] JsonError),
     /// Invalid/unsupported audio format was specified
     #[error("Invalid/unsupported audio format: {0}")]

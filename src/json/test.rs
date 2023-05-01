@@ -3,16 +3,16 @@ Test methods.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraJsonApiRequest, PandoraSession};
 
 /// Check whether Pandora is available in the connecting client’s country,
 /// based on geoip database.  This is not strictly required since Partner
 /// login enforces this restriction. The request has no parameters.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckLicensing {}
 
@@ -20,12 +20,6 @@ impl CheckLicensing {
     /// Create a new CheckLicensing.
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl Default for CheckLicensing {
-    fn default() -> Self {
-        Self {}
     }
 }
 
@@ -58,6 +52,13 @@ mod tests {
 
     #[tokio::test]
     async fn licensing_check_test() {
+        /*
+        flexi_logger::Logger::try_with_str("info, pandora_api=debug")
+            .expect("Failed to set logging configuration")
+            .start()
+            .expect("Failed to start logger");
+        */
+
         let partner = Partner::default();
         let mut session = session_login(&partner)
             .await
@@ -66,6 +67,6 @@ mod tests {
         let check_licensing_response = check_licensing(&mut session)
             .await
             .expect("Error making test.checkLicensing request");
-        println!("test.checkLicensing() => {:?}", check_licensing_response);
+        log::debug!("test.checkLicensing() => {:?}", check_licensing_response);
     }
 }

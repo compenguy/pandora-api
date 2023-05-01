@@ -3,11 +3,11 @@ Track support methods.
 */
 // SPDX-License-Identifier: MIT AND WTFPL
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraJsonApiRequest, PandoraSession};
 
 /// Get (incomplete) list of attributes assigned to song by Music Genome Project.
 ///
@@ -20,7 +20,7 @@ use crate::json::{PandoraApiRequest, PandoraSession};
 ///     "syncTime": 1336675993
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplainTrack {
@@ -59,7 +59,7 @@ impl<TS: ToString> From<&TS> for ExplainTrack {
 #[serde(rename_all = "camelCase")]
 pub struct ExplainTrackResponse {
     /// A list of explanations for why the track was chosen.
-    explanations: Vec<Explanation>,
+    _explanations: Vec<Explanation>,
 }
 
 /// Describes traits of a track that would explain why it's recommended.
@@ -94,6 +94,13 @@ mod tests {
 
     #[tokio::test]
     async fn explain_track_test() {
+        /*
+        flexi_logger::Logger::try_with_str("info, pandora_api=debug")
+            .expect("Failed to set logging configuration")
+            .start()
+            .expect("Failed to start logger");
+        */
+
         let partner = Partner::default();
         let mut session = session_login(&partner)
             .await
@@ -116,7 +123,7 @@ mod tests {
                 let explain_track = explain_track(&mut session, &track.track_token)
                     .await
                     .expect("Failed submitting track explanation request");
-                println!("Track explanation: {:?}", explain_track);
+                log::debug!("Track explanation: {:?}", explain_track);
             } else {
                 panic!("Playlist request returned no explainable results.");
             }

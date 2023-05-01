@@ -27,11 +27,11 @@ The following settings are currently read/writeable:
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
+use crate::json::{PandoraJsonApiRequest, PandoraSession, Timestamp};
 
 /// Valid values for the gender is user account settings. The documentation
 /// suggests that the only valid values are "Male", "Female".
@@ -94,7 +94,7 @@ pub struct AuthorizeFacebookUnsupported {}
 ///
 /// | Name | Type | Description |
 /// | iapVendor | string | (optional) |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CanSubscribe {
@@ -120,14 +120,6 @@ impl CanSubscribe {
     /// Set the name of the in-app purchases vendor. (Chaining call)
     pub fn iap_vendor(self, value: &str) -> Self {
         self.and_string_option("iapVendor", value)
-    }
-}
-
-impl Default for CanSubscribe {
-    fn default() -> Self {
-        Self {
-            optional: HashMap::new(),
-        }
     }
 }
 
@@ -163,7 +155,7 @@ pub async fn can_subscribe(session: &mut PandoraSession) -> Result<CanSubscribeR
 /// | userInitiatedChange | boolean | optional |
 /// | includeFacebook | boolean | optional |
 /// Additionally keys listed in Settings are permitted in the request body.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangeSettings {
@@ -345,7 +337,7 @@ pub async fn change_settings(
 /// | includeGoogleplay |   boolean      | |
 /// | includeShowUserRecommendations |  boolean      | |
 /// | includeAdvertiserAttributes | boolean      | |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUser {
@@ -459,7 +451,7 @@ pub struct DisconnectFacebookUnsupported {}
 
 /// | Name  |   Type  |   Description |
 /// | username  |   string  | |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct EmailPassword {
     /// The e-mail password recovery information to the e-mail associated with
@@ -498,7 +490,7 @@ pub async fn email_password(
 pub struct FacebookAuthFailedUnsupported {}
 
 /// The request has no parameters.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetBookmarks {}
@@ -507,12 +499,6 @@ impl GetBookmarks {
     /// Create a new GetBookmarks.
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl Default for GetBookmarks {
-    fn default() -> Self {
-        Self {}
     }
 }
 
@@ -671,7 +657,7 @@ pub struct GetFacebookInfoUnsupported {}
 
 /// | Name   |  Type   |  Description |
 /// | includeFacebook | boolean   | |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSettings {
@@ -699,14 +685,6 @@ impl GetSettings {
     }
 }
 
-impl Default for GetSettings {
-    fn default() -> Self {
-        Self {
-            optional: HashMap::new(),
-        }
-    }
-}
-
 /// See Settings for return values.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -726,7 +704,7 @@ pub async fn get_settings(session: &mut PandoraSession) -> Result<GetSettingsRes
 
 /// To check if the station list was modified by another client the checksum
 /// can be fetched. No parameters are required for this request.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct GetStationListChecksum {}
 
@@ -734,12 +712,6 @@ impl GetStationListChecksum {
     /// Create a new GetStationListChecksum.
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl Default for GetStationListChecksum {
-    fn default() -> Self {
-        Self {}
     }
 }
 
@@ -776,7 +748,7 @@ pub struct GetStationListChecksumResponse {
 ///    "syncTime": XXX
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetStationList {
@@ -839,14 +811,6 @@ impl GetStationList {
     /// Whether to include explanations in the response. (Chaining call)
     pub fn include_explanations(self, value: bool) -> Self {
         self.and_boolean_option("includeExplanations", value)
-    }
-}
-
-impl Default for GetStationList {
-    fn default() -> Self {
-        Self {
-            optional: HashMap::new(),
-        }
     }
 }
 
@@ -1000,7 +964,7 @@ pub async fn get_station_list(
 }
 
 /// The request has no parameters.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetUsageInfo {}
@@ -1009,12 +973,6 @@ impl GetUsageInfo {
     /// Create a new GetUsageInfo.
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl Default for GetUsageInfo {
-    fn default() -> Self {
-        Self {}
     }
 }
 
@@ -1113,7 +1071,7 @@ pub struct SetExplicitContentFilterUnsupported {}
 ///     "syncTime": 1338211186
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct SetQuickMix {
     /// The identifiers for stations that should be included in the quickmix.
@@ -1130,14 +1088,6 @@ impl SetQuickMix {
     /// Add a station to this quickmix.
     pub fn add_station(&mut self, station_id: &str) {
         self.quick_mix_station_ids.push(station_id.to_string());
-    }
-}
-
-impl Default for SetQuickMix {
-    fn default() -> Self {
-        Self {
-            quick_mix_station_ids: Vec::new(),
-        }
     }
 }
 
@@ -1162,7 +1112,7 @@ pub struct SetQuickMixResponse {
 ///     "syncTime": 1336386838
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct SleepSong {
     /// Temporarily ban the specified track from all stations for one month.
@@ -1191,7 +1141,7 @@ pub struct SleepSongResponse {
 ///
 /// | Name   | Type   | Description |
 /// | complimentarySponsor   | string | The ID of the sponsor providing the complimentary trial. |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[serde(rename_all = "camelCase")]
 pub struct StartComplimentaryTrial {
     /// The ID of the sponsor providing the complimentary trial.  There are no
@@ -1221,7 +1171,7 @@ pub struct StartComplimentaryTrialResponse {
 ///
 /// | Name  |   Type |    Description |
 /// | username |   string   | |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidateUsername {
@@ -1306,6 +1256,13 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "Invalid country code.")]
     async fn create_user_test() {
+        /*
+        flexi_logger::Logger::try_with_str("info, pandora_api=debug")
+            .expect("Failed to set logging configuration")
+            .start()
+            .expect("Failed to start logger");
+        */
+
         let partner = Partner::default();
         let mut session = partner.init_session();
         let partner_login = partner
@@ -1340,7 +1297,7 @@ mod tests {
         )
         .await
         {
-            Ok(cu) => println!("User successfully created? {:?}", cu),
+            Ok(cu) => log::debug!("User successfully created? {:?}", cu),
             Err(errors::Error::PandoraJsonRequestError(e))
                 if e.kind() == JsonErrorKind::InvalidCountryCode =>
             {

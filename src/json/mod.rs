@@ -188,14 +188,14 @@ impl PandoraSession {
 
         self.add_session_tokens_to_json();
         let mut body: String = self.json.to_string();
-        //if cfg!(test) {
-        //    println!("Request body: {:?}", body);
-        //}
+        if cfg!(test) {
+            log::debug!("Request body: {:?}", body);
+        }
         if self.encrypted {
             body = self.tokens.encrypt(&body);
-            //if cfg!(test) {
-            //    println!("Encrypted body: {:?}", body);
-            //}
+            if cfg!(test) {
+                log::debug!("Encrypted body: {:?}", body);
+            }
         }
 
         self.client.post(url).body(body)
@@ -258,7 +258,7 @@ pub enum PandoraStatus {
 ///
 /// It also includes two convenience methods for submitting the request.
 #[async_trait::async_trait]
-pub trait PandoraApiRequest: serde::ser::Serialize {
+pub trait PandoraJsonApiRequest: serde::ser::Serialize {
     /// The type that the json response will be deserialized to.
     type Response: Debug + serde::de::DeserializeOwned;
     /// The Error type to be returned by fallible calls on this trait.
@@ -317,7 +317,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
             // deserialization
             let response_body = response.text().await?;
             if cfg!(test) {
-                //println!("Full response: {:?}", response_body);
+                log::debug!("Full response: {:?}", response_body);
             }
             serde_json::from_slice(response_body.as_bytes())?
         } else {
@@ -326,7 +326,7 @@ pub trait PandoraApiRequest: serde::ser::Serialize {
         };
 
         if cfg!(test) {
-            //println!("Json response: {:?}", response_obj);
+            log::debug!("Json response: {:?}", response_obj);
         }
 
         let result: std::result::Result<Self::Response, JsonError> = response_obj.into();
@@ -781,7 +781,8 @@ impl From<Timestamp> for chrono::DateTime<chrono::Utc> {
         // to get local) or is it local (and tells the offset used to determine
         // local)? is it the local time of the user, or the local time for the
         // system that generated the timestamp?
-        let naive_dt = chrono::NaiveDateTime::from_timestamp(ts.time, 0);
+        let naive_dt = chrono::NaiveDateTime::from_timestamp_opt(ts.time, 0)
+            .expect("Invalid date/time timestamp");
         chrono::DateTime::<chrono::Utc>::from_utc(naive_dt, chrono::Utc)
     }
 }

@@ -229,7 +229,7 @@ impl std::fmt::Display for JsonErrorKind {
                 f,
                 "Playlist Exceeded. Too many requests for a new playlist."
             ),
-            JsonErrorKind::UnknownErrorCode(x) => write!(f, "Unrecognized Error Code ({})", x),
+            JsonErrorKind::UnknownErrorCode(x) => write!(f, "Unrecognized Error Code ({x})"),
             JsonErrorKind::UnknownErrorMessage => write!(f, "Missing Error Code."),
         }
     }
@@ -270,7 +270,7 @@ impl std::fmt::Display for JsonError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Pandora API Call Error ({} Error)", self.kind)?;
         if let Some(msg) = &self.message {
-            write!(f, ": {}", msg)?;
+            write!(f, ": {msg}")?;
         }
         Ok(())
     }

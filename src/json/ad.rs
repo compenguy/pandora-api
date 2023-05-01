@@ -10,11 +10,11 @@ provided) or displayed using imageUrl and bannerAdMap.
 // SPDX-License-Identifier: MIT AND WTFPL
 use std::collections::HashMap;
 
-use pandora_api_derive::PandoraRequest;
+use pandora_api_derive::PandoraJsonRequest;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
-use crate::json::{PandoraApiRequest, PandoraSession};
+use crate::json::{PandoraJsonApiRequest, PandoraSession};
 
 /// Retrieve the metadata for the associated advertisement token (usually provided by one of the other methods responsible for retrieving the playlist).
 ///
@@ -24,7 +24,7 @@ use crate::json::{PandoraApiRequest, PandoraSession};
 /// | returnAdTrackingTokens | boolean | (optional - but the adTrackingTokens are required by Register advertisement ) |
 /// | supportAudioAds | boolean | audioUrl links for the ads are included in the results if set to ‘True’. (optional) |
 /// | includeBannerAd | boolean | bannerAdMap containing an HTML fragment that can be embedded in web pages is included in the results if set to ‘True’. (optional) |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAdMetadata {
@@ -160,7 +160,7 @@ pub async fn get_ad_metadata(
 ///    "stat": "ok"
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterAd {

@@ -22,7 +22,7 @@ pub fn encrypt(key: &str, input: &str) -> String {
     // Generate hexadecimal representation of `cipherbytes`.
     let mut output = String::with_capacity(cipherbytes.len() * 2);
     for b in cipherbytes {
-        output.push_str(&format!("{:02x}", b));
+        output.push_str(&format!("{b:02x}"));
     }
     output
 }
@@ -70,10 +70,7 @@ where
     let mut input = input.to_vec();
     input.resize(input_len, PADDING_BYTE);
 
-    let mut output: Vec<u8> = Vec::with_capacity(input_len);
-    unsafe {
-        output.set_len(input_len);
-    }
+    let mut output: Vec<u8> = vec![PADDING_BYTE; input_len];
 
     // Encrypts input and into output
     for (ichunk, ochunk) in input.chunks(block_size).zip(output.chunks_mut(block_size)) {

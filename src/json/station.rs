@@ -8,27 +8,12 @@ can be used as seed. Based on the seeds Pandora decides which music to play.
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use pandora_api_derive::PandoraRequest;
-use serde::{de, Deserialize, Serialize};
-use serde_json::value::Value;
+use pandora_api_derive::PandoraJsonRequest;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::Error;
 use crate::json::errors::JsonError;
-use crate::json::{PandoraApiRequest, PandoraSession, Timestamp};
-
-/// Helper for deserializing comma separated lists as a Vec<String>
-fn de_comma_list<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
-    match Value::deserialize(deserializer)? {
-        Value::String(s) => Ok(s
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| s.is_empty())
-            .collect()),
-        _ => Err(de::Error::custom(
-            "Unsupported field type. Expected 'String'.",
-        )),
-    }
-}
+use crate::json::{PandoraJsonApiRequest, PandoraSession, Timestamp};
 
 /// Songs can be “loved” or “banned”. Both influence the music played on the
 /// station. Banned songs are never played again on this particular station.
@@ -48,7 +33,7 @@ fn de_comma_list<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Vec<S
 ///     "syncTime": 1404911036
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddFeedback {
@@ -170,7 +155,7 @@ pub async fn add_feedback(
 ///         "syncTime": 1404912202
 ///     }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct AddMusic {
@@ -239,7 +224,7 @@ pub async fn add_music(
 /// | trackToken | string | See Retrieve playlist |
 /// | musicType  | string | “song” or “artist” (“song” for genre stations) |
 /// | musicToken | string | See Search |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateStation {
@@ -348,7 +333,7 @@ pub async fn create_station_from_music_token(
 ///     "syncTime": 1404910760
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFeedback {
@@ -392,7 +377,7 @@ pub async fn delete_feedback(
 ///     "syncTime": 1404912023
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteMusic {
@@ -435,7 +420,7 @@ pub async fn delete_music(
 ///     "syncTime": 1404911699
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteStation {
@@ -472,7 +457,7 @@ pub async fn delete_station(
 ///
 /// | Name   | Type   | Description |
 /// | includeGenreCategoryAdUrl  | bool  |  (optional) |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStationsChecksum {
@@ -500,14 +485,6 @@ impl GetGenreStationsChecksum {
     }
 }
 
-impl Default for GetGenreStationsChecksum {
-    fn default() -> Self {
-        Self {
-            optional: HashMap::new(),
-        }
-    }
-}
-
 /// | Name   | Type  |  Description |
 /// | checksum  |  string | |
 #[derive(Debug, Clone, Deserialize)]
@@ -532,7 +509,7 @@ pub async fn get_genre_stations_checksum(
 
 /// Pandora provides a list of predefined stations ("genre stations").
 /// The request has no parameters.
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Default, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGenreStations {}
@@ -541,12 +518,6 @@ impl GetGenreStations {
     /// Create a new GetGenreStations.
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl Default for GetGenreStations {
-    fn default() -> Self {
-        Self {}
     }
 }
 
@@ -651,7 +622,7 @@ pub async fn get_genre_stations(
 ///      "stationToken": "121193154444133035"
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetPlaylist {
@@ -1044,12 +1015,6 @@ pub struct PlaylistTrack {
     pub station_id: String,
     /// The default audio streams available for this track.
     pub audio_url_map: AudioQuality,
-    /// Additional audio stream formats requested for this track.
-    #[serde(default, deserialize_with = "de_comma_list")]
-    pub additional_audio_url: Vec<String>,
-    /// A floating point value, encoded as a string, representing the track gain
-    /// that should be applied for playback.
-    pub track_gain: String,
     /// The name of the artist for this track.
     pub artist_name: String,
     /// The name of the album for this track.
@@ -1129,7 +1094,7 @@ pub async fn get_playlist(
 ///     "syncTime": 1404910732
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct GetStation {
@@ -1503,7 +1468,7 @@ pub struct PublishStationShareUnsupported {}
 /// | Name   | Type |   Description |
 /// | stationToken  |  string | Existing station, see Retrieve station list |
 /// | stationName | string | New station name |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameStation {
@@ -1550,7 +1515,7 @@ pub async fn rename_station(
 /// | stationId |  string | See Retrieve station list |
 /// | stationToken |   string | See Retrieve station list |
 /// | emails | string[] |   A list of emails to share the station with |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct ShareStation {
@@ -1608,7 +1573,7 @@ pub async fn share_station(
 ///
 /// | Name   |  Type  |   Description |
 /// | stationToken  |   string |  See Retrieve station list |
-#[derive(Debug, Clone, Serialize, PandoraRequest)]
+#[derive(Debug, Clone, Serialize, PandoraJsonRequest)]
 #[pandora_request(encrypted = true)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformSharedStation {
