@@ -4,10 +4,12 @@
 // https://github.com/CMatri/pandora-rs2/blob/master/src/crypt.rs
 // SPDX-License-Identifier: MIT
 
-use crypto::blowfish::Blowfish;
-use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor};
+use blowfish::Blowfish;
+use cipher::block_padding::NoPadding;
+use cipher::{BlockDecryptMut, BlockEncryptMut, KeyInit};
 
 const PADDING_BYTE: u8 = 2;
+const BLOCK_LEN: usize = 8;
 
 /// Returns the encrypted input using the given key.
 ///
@@ -15,9 +17,16 @@ const PADDING_BYTE: u8 = 2;
 /// which is a UTF-8 string, so it's fine to return it using
 /// the `String` type.
 pub fn encrypt(key: &str, input: &str) -> String {
-    let cipherbytes = cipher_with(key.as_bytes(), input.as_bytes(), |blowfish, from, to| {
-        blowfish.encrypt_block(from, to);
-    });
+    let mut inputbytes = input.as_bytes().to_vec();
+    let padded_len = round_len(inputbytes.len(), BLOCK_LEN);
+    inputbytes.resize(padded_len, PADDING_BYTE);
+
+    let encryptor: Blowfish =
+        Blowfish::new_from_slice(key.as_bytes()).expect("Invalid key: unsupported key length");
+
+    let cipherbytes = encryptor
+        .encrypt_padded_mut::<NoPadding>(&mut inputbytes, padded_len)
+        .expect("Error encrypting input");
 
     // Generate hexadecimal representation of `cipherbytes`.
     let mut output = String::with_capacity(cipherbytes.len() * 2);
@@ -37,17 +46,20 @@ pub fn decrypt(key: &str, hex_input: &str) -> Vec<u8> {
     use std::u8;
 
     // Gets bytes from hexadecimal representation.
-    let mut input = Vec::with_capacity(hex_input.len());
+    let mut inputbytes = Vec::with_capacity(hex_input.len());
     for chunk in hex_input.as_bytes().chunks(2) {
         // `chunk` is utf-8 since it is comming from &str.
         let fragment = unsafe { str::from_utf8_unchecked(chunk) };
         let byte = u8::from_str_radix(fragment, 16).unwrap_or(0);
-        input.push(byte);
+        inputbytes.push(byte);
     }
 
-    let mut cipherbytes = cipher_with(key.as_bytes(), &input, |blowfish, from, to| {
-        blowfish.decrypt_block(from, to);
-    });
+    let decryptor: Blowfish =
+        Blowfish::new_from_slice(key.as_bytes()).expect("Invalid key: unsupported key length");
+    let mut cipherbytes = decryptor
+        .decrypt_padded_mut::<NoPadding>(&mut inputbytes)
+        .expect("Error decrypting input")
+        .to_vec();
 
     // Ignore up to `PADDING_BYTE`.
     if let Some(index) = cipherbytes.iter().position(|&b| b == PADDING_BYTE) {
@@ -55,29 +67,6 @@ pub fn decrypt(key: &str, hex_input: &str) -> Vec<u8> {
     }
 
     cipherbytes
-}
-
-/// Divides the input in blocks and ciphers it using the given closure.
-fn cipher_with<F>(key: &[u8], input: &[u8], func: F) -> Vec<u8>
-where
-    F: Fn(&Blowfish, &[u8], &mut [u8]),
-{
-    let blowfish = Blowfish::new(key);
-    let block_size = <Blowfish as BlockEncryptor>::block_size(&blowfish);
-
-    // Input and output bytes
-    let input_len = round_len(input.len(), block_size);
-    let mut input = input.to_vec();
-    input.resize(input_len, PADDING_BYTE);
-
-    let mut output: Vec<u8> = vec![PADDING_BYTE; input_len];
-
-    // Encrypts input and into output
-    for (ichunk, ochunk) in input.chunks(block_size).zip(output.chunks_mut(block_size)) {
-        func(&blowfish, ichunk, ochunk);
-    }
-
-    output
 }
 
 /// Rounds the given len so that it contains blocks
