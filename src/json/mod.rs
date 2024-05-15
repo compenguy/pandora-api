@@ -49,7 +49,7 @@ impl PandoraSession {
         to_endpoint: &E,
     ) -> Self {
         Self {
-            client: client.unwrap_or_else(reqwest::Client::new),
+            client: client.unwrap_or_default(),
             endpoint_url: to_endpoint.to_endpoint_url(),
             tokens: SessionTokens::new(to_encryption_tokens),
             json: serde_json::value::Value::Object(serde_json::map::Map::new()),
@@ -781,9 +781,10 @@ impl From<Timestamp> for chrono::DateTime<chrono::Utc> {
         // to get local) or is it local (and tells the offset used to determine
         // local)? is it the local time of the user, or the local time for the
         // system that generated the timestamp?
-        let naive_dt = chrono::NaiveDateTime::from_timestamp_opt(ts.time, 0)
-            .expect("Invalid date/time timestamp");
-        chrono::DateTime::<chrono::Utc>::from_utc(naive_dt, chrono::Utc)
+        let dt = chrono::DateTime::from_timestamp(ts.time, 0).expect("Invalid date/time timestamp");
+        let naive_utc = dt.naive_utc();
+        let offset = *dt.offset();
+        chrono::DateTime::from_naive_utc_and_offset(naive_utc, offset)
     }
 }
 

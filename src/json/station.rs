@@ -772,8 +772,7 @@ impl AudioFormat {
             _ => Err(JsonError::new(
                 None,
                 Some(String::from("Unsupported audioUrlMap format")),
-            ))
-            .map_err(Error::from),
+            ).into()),
         }
     }
 
@@ -959,7 +958,7 @@ pub enum PlaylistEntry {
     /// Playlist entry representing an ad.
     PlaylistAd(PlaylistAd),
     /// Playlist entry representing a song/track.
-    PlaylistTrack(PlaylistTrack),
+    PlaylistTrack(Box<PlaylistTrack>),
 }
 
 impl PlaylistEntry {
@@ -984,7 +983,7 @@ impl PlaylistEntry {
     /// Returns the PlaylistTrack object for this entry, if any
     pub fn get_track(&self) -> Option<PlaylistTrack> {
         match self {
-            PlaylistEntry::PlaylistTrack(t) => Some(t.clone()),
+            PlaylistEntry::PlaylistTrack(t) => Some(*t.clone()),
             _ => None,
         }
     }
